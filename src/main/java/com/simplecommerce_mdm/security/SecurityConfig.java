@@ -11,19 +11,30 @@ import org.springframework.security.web.SecurityFilterChain;
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // Danh sách các đường dẫn công khai, không cần xác thực
+    private static final String[] PUBLIC_PATHS = {
+            "/api/v1/auth/**",
+            "/v3/api-docs/**",
+            "/swagger-ui/**",
+            "/h2-console/**"
+    };
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())) // Cho phép H2 console frame
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        // --- SỬA LẠI DÒNG NÀY ---
-                        .requestMatchers("/h2-console/**").permitAll() // Bỏ AntPathRequestMatcher đi là được
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui.html", // Cho phép file html cụ thể
+                                "/swagger-ui/**",   // Cho phép các tài nguyên con của swagger
+                                "/h2-console/**"    // Cho phép H2 console
+                        ).permitAll()
                         .anyRequest().authenticated()
-                );
-
-        http.headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin()));
+                )
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         return http.build();
     }
