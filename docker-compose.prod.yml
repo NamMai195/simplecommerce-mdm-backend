@@ -1,0 +1,184 @@
+version: '3.8'
+
+services:
+  # Production Database
+  db:
+    image: postgres:16-alpine
+    container_name: simplecommerce-db-prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${PROD_DB_USER}
+      POSTGRES_PASSWORD: ${PROD_DB_PASSWORD}
+      POSTGRES_DB: ${PROD_DB_NAME}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./docker/postgres/postgresql.conf:/etc/postgresql/postgresql.conf
+      - ./backup:/backup
+    networks:
+      - internal-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PROD_DB_USER} -d ${PROD_DB_NAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
+
+  # Production Application
+  app:
+    image: simplecommerce-mdm:${APP_VERSION:-latest}
+    container_name: simplecommerce-app-prod
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - PROD_DB_URL=jdbc:postgresql://db:5432/${PROD_DB_NAME}
+      - PROD_DB_USER=${PROD_DB_USER}
+      - PROD_DB_PASSWORD=${PROD_DB_PASSWORD}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION:-604800000}
+      - LOG_FILE_PATH=/app/logs/simplecommerce-mdm.log
+      - JAVA_OPTS=-Xmx1G -Xms512m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+    volumes:
+      - app_logs:/app/logs
+      - app_config:/app/config
+    networks:
+      - internal-network
+      - web-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+        order: start-first
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+
+  # Production Redis
+  redis:
+    image: redis:7-alpine
+    container_name: simplecommerce-redis-prod
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    volumes:
+      - redis_data:/data
+      - ./docker/redis/redis.conf:/etc/redis/redis.conf
+    networks:
+      - internal-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+        reservations:
+          memory: 256M
+          cpus: '0.1'
+
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: simplecommerce-nginx-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+      - nginx_logs:/var/log/nginx
+    networks:
+      - web-network
+    depends_on:
+      - app
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+        reservations:
+          memory: 128M
+          cpus: '0.1'
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: simplecommerce-prometheus
+    restart: always
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    networks:
+      - internal-network
+      - monitoring-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.25'
+
+volumes:
+  db_data:
+    driver: local
+  redis_data:
+    driver: local
+  app_logs:
+    driver: local
+  app_config:
+    driver: local
+  nginx_logs:
+    driver: local
+  prometheus_data:
+    driver: local
+
+networks:
+  internal-network:
+    driver: overlay
+    internal: true
+  web-network:
+    driver: overlay
+  monitoring-network:
+    driver: overlay
+    internal: true 

@@ -1,0 +1,56 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+docs/
+
+# IDE files
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Maven
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.properties
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Environment files
+.env*
+*.env
+
+# Logs
+logs/
+*.log
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+*.swp
+*~
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Build artifacts
+dist/
+build/ 
