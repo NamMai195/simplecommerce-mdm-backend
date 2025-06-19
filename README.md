@@ -1,126 +1,359 @@
-# SimpleCommerce Backend
+# 🛒 SimpleCommerce MDM Backend
 
-Chào mừng đến với project backend của nền tảng thương mại điện tử SimpleCommerce. Tài liệu này sẽ giúp các thành viên mới hiểu rõ về cấu trúc và các quy ước được sử dụng trong dự án.
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.0-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://www.oracle.com/java/)
+[![H2 Database](https://img.shields.io/badge/H2-Database-blue.svg)](https://www.h2database.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue.svg)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 
-## Công nghệ sử dụng
+> **Hệ thống Backend Thương mại điện tử** được xây dựng với Spring Boot, thiết kế theo kiến trúc **Modular Monolith** với các module được tổ chức rõ ràng.
 
-- **Ngôn ngữ:** Java 17+
-- **Framework:** Spring Boot 3.x
-- **Tương tác CSDL:** Spring Data JPA (Hibernate)
-- **Bảo mật:** Spring Security
-- **CSDL:** PostgreSQL (Production) / H2 (Development)
-- **Build Tool:** Maven
+## 📋 Mục Lục
+
+- [🎯 Tổng Quan Dự Án](#-tổng-quan-dự-án)
+- [🏗️ Kiến Trúc](#️-kiến-trúc)
+- [🚀 Bắt Đầu Nhanh](#-bắt-đầu-nhanh)
+- [⚙️ Cài Đặt Development](#️-cài-đặt-development)
+- [🐳 Triển Khai Docker](#-triển-khai-docker)
+- [📚 Tài Liệu API](#-tài-liệu-api)
+- [🧪 Testing](#-testing)
+- [🔧 Cấu Hình](#-cấu-hình)
+- [🤝 Đóng Góp](#-đóng-góp)
+
+## 🎯 Tổng Quan Dự Án
+
+SimpleCommerce MDM (Master Data Management) Backend là nền tảng thương mại điện tử được thiết kế để quản lý:
+
+- **Quản lý người dùng** - User, Role, Permission, Address
+- **Catalog sản phẩm** - Product, Category, ProductVariant, Inventory
+- **Xử lý đơn hàng** - Cart, Order, MasterOrder, Payment
+- **Khuyến mãi** - Promotion, Voucher, UserAppliedVoucher
+- **Đánh giá** - Review system
+
+### 🎯 Tính Năng Hiện Tại
+
+- ✅ **Kiến trúc Modular Monolith** - Các module được tổ chức rõ ràng
+- ✅ **Entity Mapping hoàn chỉnh** - JPA entities với quan hệ đầy đủ
+- ✅ **Audit Trail** - BaseEntity với created/updated tracking
+- ✅ **Soft Delete Pattern** - Logical delete với deleted_at
+- ✅ **JWT Authentication** - JWT token-based security
+- ✅ **API Documentation** - OpenAPI 3 với Swagger UI
+- ✅ **Multi-environment** - Dev, Test, Production profiles
+- ✅ **Docker Support** - Full containerization với docker-compose
+- ✅ **Database Flexibility** - H2 cho development, PostgreSQL cho production
+
+## 🏗️ Kiến Trúc
+
+### Cấu Trúc Module
+
+```
+src/main/java/com/simplecommerce_mdm/
+├── 🔐 auth/           # Authentication & Authorization
+│   ├── controller/    # AuthController
+│   ├── dto/          # UserRegistrationDto
+│   └── service/      # AuthService & Implementation
+├── 👤 user/           # User Management
+│   ├── model/        # User, Role, Permission, Address
+│   └── repository/   # UserRepository
+├── 📦 product/        # Product Catalog
+│   └── model/        # Product, Category, ProductVariant, Shop
+├── 🛒 cart/           # Shopping Cart
+│   └── model/        # Cart, CartItem
+├── 📋 order/          # Order Processing
+│   └── model/        # MasterOrder, Order, OrderItem, Payment
+├── 🎁 promotion/      # Promotions & Vouchers
+│   └── model/        # Promotion, Voucher, UserAppliedVoucher
+├── ⭐ review/         # Review System
+│   └── model/        # Review
+├── 🔧 config/         # Application Configuration
+├── 🛡️ security/       # Security Configuration
+└── 🌐 common/         # Shared Components
+    ├── domain/        # BaseEntity với Audit
+    ├── enums/         # Status enums
+    └── controller/    # HealthController
+```
+
+### Stack Công Nghệ
+
+| Loại | Công Nghệ |
+|----------|------------|
+| **Framework** | Spring Boot 3.5.0 |
+| **Ngôn ngữ** | Java 17/21 |
+| **Database** | H2 (Dev) / PostgreSQL 16 (Production) |
+| **Caching** | Redis 7 (Docker only) |
+| **Bảo mật** | Spring Security + JWT |
+| **ORM** | Hibernate 6.x với JPA |
+| **Build Tool** | Maven 3.9+ |
+| **Containerization** | Docker & Docker Compose |
+| **API Documentation** | SpringDoc OpenAPI 3 |
+| **Logging** | SLF4J + Logback |
+
+## 🚀 Bắt Đầu Nhanh
+
+### Yêu Cầu Hệ Thống
+
+- ☑️ **Java 17+** - [Tải OpenJDK](https://openjdk.org/)
+- ☑️ **Maven 3.6+** - Hoặc sử dụng wrapper `./mvnw`
+- ☑️ **Docker & Docker Compose** (Optional) - [Cài đặt Docker](https://docs.docker.com/get-docker/)
+
+### 1. Clone Repository
+
+```bash
+git clone <repository-url>
+cd simplecommerce-mdm-backend
+```
+
+### 2. Chạy ứng dụng (Development - H2 Database)
+
+```bash
+# Sử dụng Maven wrapper (Khuyến nghị)
+./mvnw spring-boot:run
+
+# Hoặc nếu đã cài Maven
+mvn spring-boot:run
+```
+
+### 3. Truy cập ứng dụng
+
+- **Application**: http://localhost:8080
+- **Health Check**: http://localhost:8080/api/v1/health
+- **H2 Console**: http://localhost:8080/h2-console
+- **API Documentation**: http://localhost:8080/swagger-ui.html
+
+#### H2 Database Connection (Development)
+```
+URL: jdbc:h2:mem:simplecommerce_db
+Username: sa
+Password: (để trống)
+```
+
+## ⚙️ Cài Đặt Development
+
+### Option 1: Local Development (H2 Database)
+
+```bash
+# Chạy với profile development (mặc định)
+./mvnw spring-boot:run
+
+# Hoặc với profile cụ thể
+./mvnw spring-boot:run -Dspring-boot.run.profiles=dev
+```
+
+### Option 2: Docker Development (PostgreSQL)
+
+```bash
+# Khởi động full stack với PostgreSQL
+make dev
+
+# Hoặc sử dụng docker-compose trực tiếp
+docker-compose up --build -d
+```
+
+### Truy Cập Các Dịch Vụ (Docker)
+
+| Dịch vụ | URL | Thông tin đăng nhập |
+|---------|-----|-------------|
+| **Application** | http://localhost:8080 | - |
+| **Health Check** | http://localhost:8080/api/v1/health | - |
+| **API Docs** | http://localhost:8080/swagger-ui.html | - |
+| **PostgreSQL** | localhost:5432 | nammai / Nam@0917174910 |
+| **pgAdmin** | http://localhost:5050 | admin@simplecommerce.com / admin123 |
+| **Redis** | localhost:6379 | - |
+
+## 🐳 Triển Khai Docker
+
+### Development Environment
+
+```bash
+# Khởi động tất cả dịch vụ
+make dev
+
+# Xem logs
+make dev-logs
+
+# Dừng dịch vụ
+make dev-stop
+
+# Dọn dẹp hoàn toàn
+make dev-clean
+```
+
+### Production Environment
+
+```bash
+# Build production image
+make prod-build
+
+# Triển khai production
+make prod-up
+
+# Theo dõi logs
+make prod-logs
+```
+
+### Dịch Vụ Trong Docker
+
+- **Application** - Spring Boot app với PostgreSQL
+- **PostgreSQL 16** - Database chính với persistent volume
+- **Redis 7** - Caching layer (sẵn sàng tích hợp)
+- **pgAdmin** - Database management interface
+
+## 📚 Tài Liệu API
+
+### Swagger UI
+- **Development**: http://localhost:8080/swagger-ui.html
+- **OpenAPI Spec**: http://localhost:8080/v3/api-docs
+
+### Endpoints Hiện Tại
+
+```bash
+# Health Check
+GET /api/v1/health              # Application health status
+
+# Authentication (In Development)
+POST /api/v1/auth/register      # User registration
+POST /api/v1/auth/login         # User login
+
+# Note: Most endpoints are being developed
+# Check Swagger UI for updated API documentation
+```
+
+## 🧪 Testing
+
+### Chạy Tests
+
+```bash
+# Chạy tất cả tests
+make maven-test
+# hoặc
+./mvnw test
+
+# Chạy tests với coverage
+make ci-test
+
+# Chạy test cụ thể
+./mvnw test -Dtest=SimpleEntityTest
+```
+
+### Test Configuration
+
+- **Test Database**: H2 in-memory database
+- **Test Profile**: Tự động sử dụng `test` profile
+- **Test Coverage**: JaCoCo được cấu hình sẵn
+
+## 🔧 Cấu Hình
+
+### Environment Profiles
+
+- **dev** (default) - H2 database, debug logging
+- **test** - H2 in-memory, minimal logging  
+- **prod** - PostgreSQL, optimized settings
+
+### Database Configuration
+
+#### Development (H2)
+```yaml
+spring:
+  datasource:
+    url: jdbc:h2:mem:simplecommerce_db
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+```
+
+#### Production (PostgreSQL via Docker)
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://db:5432/simplecommerce_mdm
+    username: nammai
+    password: Nam@0917174910
+```
+
+### Makefile Commands
+
+```bash
+make help           # Hiển thị tất cả commands
+make dev            # Start development environment
+make maven-run      # Run local với Maven
+make maven-test     # Run tests
+make health         # Check application health
+make db-connect     # Connect to PostgreSQL
+```
+
+## 🤝 Đóng Góp
+
+### Development Workflow
+
+1. **Setup**: `make dev` hoặc `./mvnw spring-boot:run`
+2. **Testing**: `make maven-test` trước khi commit
+3. **Code Style**: Tuân thủ Java conventions
+4. **Entity Design**: Extend `BaseEntity` cho audit trail
+5. **Documentation**: Cập nhật API docs khi cần
+
+### Project Structure Guidelines
+
+```java
+// ✅ Tốt: Entity với BaseEntity
+@Entity
+@Table(name = "users")
+@SQLDelete(sql = "UPDATE users SET deleted_at = NOW() WHERE id = ?")
+@Where(clause = "deleted_at IS NULL")
+public class User extends BaseEntity {
+    // entity fields
+}
+
+// ✅ Tốt: Enum values
+public enum OrderStatus {
+    PENDING, CONFIRMED, SHIPPED, DELIVERED, CANCELLED
+}
+```
+
+### Quy Ước Commit
+
+```bash
+feat: thêm User entity và repository
+fix: sửa lỗi JSON mapping trong Product
+docs: cập nhật README với cấu hình Docker
+refactor: tối ưu hóa structure của Order module
+```
 
 ---
 
-## Kiến trúc hệ thống: Modular Monolith
+## 📊 Trạng Thái Dự Án
 
-Dự án được xây dựng theo kiến trúc **Monolithic được Module hóa (Modular Monolith)**.
+### ✅ Đã Hoàn Thành
+- Entity design và relationships
+- Base architecture setup
+- Docker containerization
+- Development environment
+- Basic authentication structure
 
-#### Tại sao lại chọn kiến trúc này?
+### 🚧 Đang Phát Triển
+- API endpoints implementation
+- Service layer completion
+- Frontend integration
+- Advanced security features
 
-- **Đơn giản như Monolith:** Toàn bộ code nằm trong một project duy nhất, dễ dàng để chạy, kiểm thử và triển khai.
-- **Tổ chức như Microservices:** Code được chia thành các module độc lập tương đối dựa trên nghiệp vụ (domain). Mỗi module có trách nhiệm riêng, giúp code rõ ràng, dễ bảo trì và giảm sự phụ thuộc lẫn nhau.
-- **Dễ dàng mở rộng:** Khi cần, một module được thiết kế tốt có thể được tách ra thành một microservice riêng mà không ảnh hưởng lớn đến toàn bộ hệ thống.
-
----
-
-## Cấu trúc thư mục
-
-Đây là cấu trúc thư mục tổng thể của dự án. Việc tuân thủ cấu trúc này là bắt buộc để đảm bảo sự nhất quán.
-
-simplecommerce-backend/
-└── src/
-└── main/
-├── java/
-│   └── com/
-│       └── simplecommerce/
-│           ├── auth/
-│           ├── cart/
-│           ├── common/
-│           ├── config/
-│           ├── exception/
-│           ├── order/
-│           ├── product/
-│           ├── promotion/
-│           ├── review/
-│           ├── security/
-│           └── user/
-└── resources/
-└── application.properties
-
-
-### Chú giải các Module chính
-
-Mỗi package trong `com.simplecommerce` đại diện cho một module chức năng hoặc một phần của cơ sở hạ tầng.
-
--   **`auth`**: Xử lý các nghiệp vụ **xác thực** như đăng ký, đăng nhập, tạo token.
--   **`user`**: Quản lý thông tin và các hoạt động liên quan đến người dùng (cập nhật profile, địa chỉ...).
--   **`product`**: Quản lý sản phẩm, danh mục, shop, và các thuộc tính liên quan.
--   **`cart`**: Xử lý logic giỏ hàng.
--   **`order`**: Xử lý logic đặt hàng, lịch sử đơn hàng và thanh toán.
--   **`promotion`**: Quản lý mã giảm giá, vouchers, và các chương trình khuyến mãi.
--   **`review`**: Quản lý đánh giá và bình luận sản phẩm.
+### 📋 Kế Hoạch
+- Redis caching integration
+- File upload với Cloudinary
+- Email notifications
+- Performance monitoring
+- CI/CD pipeline
 
 ---
 
-### Chú giải các Package cơ sở hạ tầng
+## 📄 Giấy Phép
 
--   **`config`**: Chứa các lớp cấu hình `@Configuration` của Spring (ví dụ: tạo bean cho ModelMapper, PasswordEncoder...).
--   **`security`**: Chứa các cấu hình liên quan đến Spring Security, bộ lọc JWT và các logic bảo mật.
--   **`exception`**: Chứa các lớp xử lý exception tập trung (Global Exception Handler) để trả về response lỗi nhất quán.
--   **`common`**: Chứa các lớp tiện ích hoặc các đối tượng dùng chung cho toàn bộ dự án.
+Dự án này đang trong quá trình phát triển cho mục đích học tập và thương mại.
 
 ---
 
-## Hướng dẫn Cài đặt & Khởi chạy
+<div align="center">
 
-#### Yêu cầu
--   JDK 17 hoặc cao hơn.
--   Maven 3.8.x hoặc cao hơn.
--   IntelliJ IDEA hoặc IDE tương đương.
+**🚀 SimpleCommerce MDM Backend - Nền tảng thương mại điện tử hiện đại**
 
-#### Các bước cài đặt
-1.  **Clone a repository:**
-    ```bash
-    git clone <your-repository-url>
-    ```
-2.  **Mở project** bằng IntelliJ IDEA và chờ Maven tải các dependency về.
+[📚 API Docs](http://localhost:8080/swagger-ui.html) • [🐳 Docker Setup](docker-compose.yml) • [🔧 Makefile Commands](Makefile)
 
-3.  **Cấu hình `application.properties`:**
-    Mở file `src/main/resources/application.properties` và cấu hình kết nối CSDL.
-    
-    * **Để phát triển (dùng H2 In-memory):**
-      ```properties
-      spring.datasource.url=jdbc:h2:mem:simplecommerce_db
-      spring.datasource.driverClassName=org.h2.Driver
-      spring.datasource.username=sa
-      spring.datasource.password=
-      spring.h2.console.enabled=true
-      spring.jpa.hibernate.ddl-auto=update
-      ```
-
-    * **Để chạy trên môi trường Staging/Production (dùng PostgreSQL):**
-      ```properties
-      spring.datasource.url=jdbc:postgresql://localhost:5432/your_db_name
-      spring.datasource.username=your_username
-      spring.datasource.password=your_password
-      spring.jpa.hibernate.ddl-auto=validate
-      ```
-4.  **Chạy ứng dụng:** Tìm đến file `SimplecommerceBackendApplication.java` và nhấn nút Run.
-
----
-
-## Tài liệu API
-
-Dự án tích hợp Springdoc OpenAPI để tự động tạo tài liệu. Sau khi chạy project, truy cập vào đường dẫn sau để xem và tương tác với các API:
-
-[**http://localhost:8080/swagger-ui.html**](http://localhost:8080/swagger-ui.html)
-
----
-
-## Nguyên tắc Code
-
--   **Luồng xử lý:** Luôn tuân thủ luồng `Controller -> Service -> Repository`.
--   **DTO Pattern:** Luôn sử dụng DTO (Data Transfer Object) để trao đổi dữ liệu giữa Controller và Service. Không bao giờ trả về Entity trực tiếp từ API.
--   **Validation:** Dùng `jakarta.validation` (ví dụ: `@NotBlank`, `@Email`) trên các DTO để kiểm tra dữ liệu đầu vào.
+</div>
