@@ -1,0 +1,17 @@
+package com.simplecommerce_mdm.common.enums;
+
+public enum OrderStatus {
+    PENDING_PAYMENT,
+    AWAITING_CONFIRMATION,
+    PROCESSING,
+    SHIPPED,
+    DELIVERED,
+    COMPLETED,
+    CANCELLED_BY_USER,
+    CANCELLED_BY_SELLER,
+    CANCELLED_BY_ADMIN,
+    RETURN_REQUESTED,
+    RETURN_APPROVED,
+    RETURNED,
+    FAILED
+} 
