@@ -14,7 +14,7 @@ spring:
   h2:
     console:
       enabled: false
-  
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -24,7 +24,7 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
         use_sql_comments: true
-        
+
 logging:
   level:
     root: INFO
@@ -40,4 +40,27 @@ management:
         include: health,info,metrics
   endpoint:
     health:
-      show-details: always 
+      show-details: always
+
+# Swagger Configuration
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+  show-actuator: true
+
+
+# OpenAPI Configuration
+openapi:
+  service:
+    api-docs: backend-service
+    server: http://localhost:${server.port}
+    title: Simplecommerce MDM API
+    version: 1.0.0
+    description: API documentation for Simplecommerce MDM
+
+# Frontend Configuration
+frontend:
+  url: http://localhost:5173
