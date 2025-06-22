@@ -3,6 +3,8 @@ spring:
     active: dev
   application:
     name: simplecommerce-mdm-backend
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
   
   datasource:
     url: jdbc:h2:mem:simplecommerce_db
