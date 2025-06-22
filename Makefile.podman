@@ -1,0 +1,159 @@
+# ==============================================
+# SimpleCommerce MDM Backend - Podman Makefile
+# ==============================================
+
+.PHONY: help build run stop clean test dev prod logs
+
+# Default goal
+.DEFAULT_GOAL := help
+
+# Variables
+APP_NAME := simplecommerce-mdm
+VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "latest")
+PODMAN_IMAGE := $(APP_NAME):$(VERSION)
+
+# Colors for terminal output
+RED := \033[0;31m
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+BLUE := \033[0;34m
+NC := \033[0m # No Color
+
+help: ## Show this help message
+	@echo "$(BLUE)SimpleCommerce MDM Backend - Podman Commands$(NC)"
+	@echo "=================================================="
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "$(GREEN)%-20s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+# ==============================================
+# Podman Development Commands
+# ==============================================
+
+podman-dev: ## Start development environment with Podman
+	@echo "$(YELLOW)Starting development environment with Podman...$(NC)"
+	podman-compose -f podman-compose.yml up --build -d
+	@echo "$(GREEN)Development environment started!$(NC)"
+	@echo "$(BLUE)Application: http://localhost:8080$(NC)"
+	@echo "$(BLUE)PostgreSQL: localhost:5432$(NC)"
+	@echo "$(BLUE)pgAdmin: http://localhost:5050$(NC)"
+	@echo "$(BLUE)Redis: localhost:6379$(NC)"
+
+podman-dev-logs: ## Show development logs
+	podman-compose -f podman-compose.yml logs -f app
+
+podman-dev-stop: ## Stop development environment
+	@echo "$(YELLOW)Stopping development environment...$(NC)"
+	podman-compose -f podman-compose.yml down
+	@echo "$(GREEN)Development environment stopped!$(NC)"
+
+podman-dev-clean: ## Clean development environment (remove volumes)
+	@echo "$(RED)Cleaning development environment...$(NC)"
+	podman-compose -f podman-compose.yml down -v --remove-orphans
+	podman system prune -f
+	@echo "$(GREEN)Development environment cleaned!$(NC)"
+
+# ==============================================
+# Individual Service Commands
+# ==============================================
+
+podman-db-only: ## Start only PostgreSQL database
+	@echo "$(YELLOW)Starting PostgreSQL with Podman...$(NC)"
+	podman run -d \
+		--name simplecommerce-db \
+		--restart unless-stopped \
+		-e POSTGRES_USER=nammai \
+		-e POSTGRES_PASSWORD=Nam@0917174910 \
+		-e POSTGRES_DB=simplecommerce_mdm \
+		-e POSTGRES_INITDB_ARGS="--encoding=UTF-8 --lc-collate=C --lc-ctype=C" \
+		-p 5432:5432 \
+		-v simplecommerce_data:/var/lib/postgresql/data:Z \
+		docker.io/postgres:16-alpine
+	@echo "$(GREEN)PostgreSQL started!$(NC)"
+	@echo "$(BLUE)Connection: localhost:5432$(NC)"
+	@echo "$(BLUE)Database: simplecommerce_mdm$(NC)"
+	@echo "$(BLUE)User: nammai$(NC)"
+
+podman-redis-only: ## Start only Redis
+	@echo "$(YELLOW)Starting Redis with Podman...$(NC)"
+	podman run -d \
+		--name simplecommerce-redis \
+		--restart unless-stopped \
+		-p 6379:6379 \
+		-v redis_data:/data:Z \
+		docker.io/redis:7-alpine
+	@echo "$(GREEN)Redis started!$(NC)"
+
+podman-pgadmin-only: ## Start only pgAdmin
+	@echo "$(YELLOW)Starting pgAdmin with Podman...$(NC)"
+	podman run -d \
+		--name simplecommerce-pgadmin \
+		--restart unless-stopped \
+		-e PGADMIN_DEFAULT_EMAIL=admin@simplecommerce.com \
+		-e PGADMIN_DEFAULT_PASSWORD=admin123 \
+		-e PGADMIN_CONFIG_SERVER_MODE=False \
+		-p 5050:80 \
+		-v pgadmin_data:/var/lib/pgadmin:Z \
+		docker.io/dpage/pgadmin4:latest
+	@echo "$(GREEN)pgAdmin started!$(NC)"
+	@echo "$(BLUE)Access: http://localhost:5050$(NC)"
+	@echo "$(BLUE)Email: admin@simplecommerce.com$(NC)"
+	@echo "$(BLUE)Password: admin123$(NC)"
+
+# ==============================================
+# Database Commands
+# ==============================================
+
+podman-db-connect: ## Connect to PostgreSQL database
+	@echo "$(YELLOW)Connecting to PostgreSQL database...$(NC)"
+	podman exec -it simplecommerce-db psql -U nammai -d simplecommerce_mdm
+
+podman-db-logs: ## Show PostgreSQL logs
+	podman logs -f simplecommerce-db
+
+podman-db-backup: ## Backup PostgreSQL database
+	@mkdir -p backup
+	@echo "$(YELLOW)Backing up PostgreSQL database...$(NC)"
+	podman exec simplecommerce-db pg_dump -U nammai simplecommerce_mdm > backup/backup_$(shell date +%Y%m%d_%H%M%S).sql
+	@echo "$(GREEN)Database backup completed!$(NC)"
+
+# ==============================================
+# Utility Commands
+# ==============================================
+
+podman-status: ## Show container status
+	@echo "$(BLUE)Podman Container Status:$(NC)"
+	podman ps -a --filter name=simplecommerce
+
+podman-network-create: ## Create podman network
+	@echo "$(YELLOW)Creating podman network...$(NC)"
+	podman network create simplecommerce-network || true
+	@echo "$(GREEN)Network created/exists!$(NC)"
+
+podman-volumes-list: ## List podman volumes
+	@echo "$(BLUE)Podman Volumes:$(NC)"
+	podman volume ls --filter label=com.docker.compose.project=simplecommerce-mdm-backend
+
+podman-clean-all: ## Clean all containers, images, and volumes
+	@echo "$(RED)WARNING: This will remove all SimpleCommerce containers, images, and volumes!$(NC)"
+	@read -p "Are you sure? [y/N] " -n 1 -r; \
+	echo; \
+	if [[ $$REPLY =~ ^[Yy]$$ ]]; then \
+		podman stop $$(podman ps -a -q --filter name=simplecommerce) 2>/dev/null || true; \
+		podman rm $$(podman ps -a -q --filter name=simplecommerce) 2>/dev/null || true; \
+		podman volume rm $$(podman volume ls -q --filter label=com.docker.compose.project=simplecommerce-mdm-backend) 2>/dev/null || true; \
+		podman system prune -f; \
+		echo "$(GREEN)Everything cleaned!$(NC)"; \
+	else \
+		echo "$(YELLOW)Operation cancelled.$(NC)"; \
+	fi
+
+# ==============================================
+# Maven Commands (same as original)
+# ==============================================
+
+maven-run-with-podman: ## Run application locally with Podman database
+	@echo "$(YELLOW)Starting PostgreSQL with Podman first...$(NC)"
+	$(MAKE) podman-db-only
+	@echo "$(YELLOW)Waiting for database to be ready...$(NC)"
+	@sleep 10
+	@echo "$(YELLOW)Running Spring Boot application...$(NC)"
+	./mvnw spring-boot:run -Dspring-boot.run.profiles=dev 
