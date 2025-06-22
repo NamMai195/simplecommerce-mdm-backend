@@ -20,6 +20,8 @@ spring:
   jpa:
     properties:
       hibernate:
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
         show_sql: false
         format_sql: false
         use_sql_comments: false
@@ -45,4 +47,4 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
-    operationsSorter: method 
+    operationsSorter: method

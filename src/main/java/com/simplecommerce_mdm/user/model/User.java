@@ -6,7 +6,7 @@ import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
 
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -58,17 +58,17 @@ public class User extends BaseEntity {
     private String avatarUrl;
 
     @Column(name = "email_verified_at")
-    private OffsetDateTime emailVerifiedAt;
+    private LocalDateTime emailVerifiedAt;
 
     @Column(name = "phone_verified_at")
-    private OffsetDateTime phoneVerifiedAt;
+    private LocalDateTime phoneVerifiedAt;
 
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
 
     @Column(name = "last_login_at")
-    private OffsetDateTime lastLoginAt;
+    private LocalDateTime lastLoginAt;
 
     @Column(name = "metadata", columnDefinition = "TEXT")
     @Builder.Default
