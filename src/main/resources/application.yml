@@ -39,15 +39,8 @@ logging:
 springdoc:
   api-docs:
     enabled: true
+    path: /v3/api-docs
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
-
-# OpenAPI Configuration
-openapi:
-  service:
-    api-docs: backend-service
-    server: http://localhost:${server.port}
-    title: Simplecommerce MDM API
-    version: 1.0.0
-    description: API documentation for Simplecommerce MDM 
+    operationsSorter: method 
