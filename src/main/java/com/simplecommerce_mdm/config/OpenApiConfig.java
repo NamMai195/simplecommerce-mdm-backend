@@ -29,13 +29,10 @@ public class OpenApiConfig {
     }
 
     @Bean
-    public OpenAPI openAPI(
-            @Value("${openapi.service.title}") String title,
-            @Value("${openapi.service.version}") String version,
-            @Value("${openapi.service.server}") String serverUrl) {
+    public OpenAPI openAPI() {
         final String securitySchemeName = "bearerAuth";
         return new OpenAPI()
-                .servers(List.of(new Server().url(serverUrl)))
+                .servers(List.of(new Server().url("http://localhost:8080")))
                 .components(
                         new Components()
                                 .addSecuritySchemes(
@@ -45,9 +42,10 @@ public class OpenApiConfig {
                                                 .scheme("bearer")
                                                 .bearerFormat("JWT")))
                 .security(List.of(new SecurityRequirement().addList(securitySchemeName)))
-                .info(new Info().title(title)
+                .info(new Info()
+                        .title("Simplecommerce MDM API")
                         .description("API documents for Backend service")
-                        .version(version)
+                        .version("1.0.0")
                         .license(new License().name("Apache 2.0").url("https://springdoc.org")));
     }
 

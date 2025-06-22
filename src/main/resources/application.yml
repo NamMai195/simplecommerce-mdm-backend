@@ -33,4 +33,21 @@ logging:
   level:
     com.simplecommerce_mdm: INFO
     org.springframework.security: WARN
-    org.hibernate.SQL: WARN 
+    org.hibernate.SQL: WARN
+
+# Swagger Configuration
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+
+# OpenAPI Configuration
+openapi:
+  service:
+    api-docs: backend-service
+    server: http://localhost:${server.port}
+    title: Simplecommerce MDM API
+    version: 1.0.0
+    description: API documentation for Simplecommerce MDM 
