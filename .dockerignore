@@ -1,44 +1,57 @@
-# Git files
+# Git
 .git
 .gitignore
-.gitattributes
 
-# Documentation
-README.md
-*.md
-docs/
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
 
 # IDE files
-.vscode/
 .idea/
+.vscode/
 *.iml
 *.ipr
 *.iws
 
-# Maven
-target/
-!.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
-.mvn/timing.properties
-.mvn/wrapper/maven-wrapper.properties
+# Log files
+*.log
+logs/
+
+# Local env files
+.env
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Other
+README.md
+# mvnw
+# mvnw.cmd
+# .mvn/
+docker/
+docker-compose.yml
+docker-compose.prod.yml
+podman-compose.yml
+run-postgres-podman.sh
+Makefile
+Makefile.podman
+DEPLOYMENT_GUIDE.md
+env.example
+src/test/
+
+# Documentation
+*.md
+docs/
 
 # Docker files
 Dockerfile*
-docker-compose*.yml
 .dockerignore
-
-# Environment files
-.env*
-*.env
-
-# Logs
-logs/
-*.log
-
-# OS specific
-.DS_Store
-Thumbs.db
 
 # Temporary files
 temp/

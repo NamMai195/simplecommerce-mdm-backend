@@ -78,8 +78,8 @@ src/main/java/com/simplecommerce_mdm/
 | Loại | Công Nghệ |
 |----------|------------|
 | **Framework** | Spring Boot 3.5.0 |
-| **Ngôn ngữ** | Java 17/21 |
-| **Database** | H2 (Dev) / PostgreSQL 16 (Production) |
+| **Ngôn ngữ** | Java 17 |
+| **Database** | H2 (Dev) / PostgreSQL 15 (Production) |
 | **Caching** | Redis 7 (Docker only) |
 | **Bảo mật** | Spring Security + JWT |
 | **ORM** | Hibernate 6.x với JPA |
@@ -113,7 +113,52 @@ cd simplecommerce-mdm-backend
 mvn spring-boot:run
 ```
 
-### 3. Truy cập ứng dụng
+### 3. Chạy ứng dụng với Docker (Khuyến nghị)
+
+Đây là cách được khuyến nghị để chạy môi trường development đầy đủ, bao gồm cả database và các dịch vụ khác.
+
+**Bước 1: Chuẩn bị file môi trường**
+
+Sao chép file cấu hình mẫu. Bạn chỉ cần làm việc này một lần.
+```bash
+cp env.example .env
+```
+Mở file `.env` và xem lại các giá trị. Mật khẩu mặc định không an toàn, bạn nên thay đổi chúng.
+
+**Bước 2: Khởi động môi trường**
+
+Sử dụng `make` (đơn giản nhất):
+```bash
+# Khởi động toàn bộ stack: API, DB, pgAdmin, Redis
+make dev
+```
+Hoặc dùng `docker-compose` trực tiếp:
+```bash
+docker-compose up --build -d
+```
+
+**Bước 3: Truy cập các dịch vụ**
+
+| Dịch vụ | URL | Thông tin đăng nhập (kiểm tra file `.env`) |
+|-----------------|-----------------------------------------|----------------------------------------------------|
+| **Application** | `http://localhost:${SERVER_PORT}` | - |
+| **Health Check** | `http://localhost:${SERVER_PORT}/api/v1/health` | - |
+| **API Docs** | `http://localhost:${SERVER_PORT}/swagger-ui.html` | - |
+| **PostgreSQL** | `localhost:${POSTGRES_PORT}` | User: `${POSTGRES_USER}` / Pass: `${POSTGRES_PASSWORD}` |
+| **pgAdmin** | `http://localhost:${PGADMIN_PORT}` | Email: `${PGADMIN_DEFAULT_EMAIL}` / Pass: `${PGADMIN_DEFAULT_PASSWORD}` |
+| **Redis** | `localhost:${REDIS_PORT}` | - |
+
+**Bước 4: Dừng môi trường**
+
+```bash
+# Dừng các container
+make dev-stop
+
+# Dừng và xoá cả volume (dữ liệu database)
+make dev-clean
+```
+
+### 4. Truy cập ứng dụng (Local)
 
 - **Application**: http://localhost:8080
 - **Health Check**: http://localhost:8080/api/v1/health
@@ -127,7 +172,7 @@ Username: sa
 Password: (để trống)
 ```
 
-## ⚙️ Cài Đặt Development
+## ⚙️ Cài Đặt Development (Không dùng Docker)
 
 ### Option 1: Local Development (H2 Database)
 
@@ -141,60 +186,16 @@ Password: (để trống)
 
 ### Option 2: Docker Development (PostgreSQL)
 
-```bash
-# Khởi động full stack với PostgreSQL
-make dev
-
-# Hoặc sử dụng docker-compose trực tiếp
-docker-compose up --build -d
-```
-
-### Truy Cập Các Dịch Vụ (Docker)
-
-| Dịch vụ | URL | Thông tin đăng nhập |
-|---------|-----|-------------|
-| **Application** | http://localhost:8080 | - |
-| **Health Check** | http://localhost:8080/api/v1/health | - |
-| **API Docs** | http://localhost:8080/swagger-ui.html | - |
-| **PostgreSQL** | localhost:5432 | nammai / ***REMOVED*** |
-| **pgAdmin** | http://localhost:5050 | admin@simplecommerce.com / admin123 |
-| **Redis** | localhost:6379 | - |
+Phần này đã được chuyển lên mục [**Chạy ứng dụng với Docker**](#3-chạy-ứng-dụng-với-docker-khuyến-nghị) để dễ theo dõi.
 
 ## 🐳 Triển Khai Docker
 
-### Development Environment
-
-```bash
-# Khởi động tất cả dịch vụ
-make dev
-
-# Xem logs
-make dev-logs
-
-# Dừng dịch vụ
-make dev-stop
-
-# Dọn dẹp hoàn toàn
-make dev-clean
-```
-
-### Production Environment
-
-```bash
-# Build production image
-make prod-build
-
-# Triển khai production
-make prod-up
-
-# Theo dõi logs
-make prod-logs
-```
+Vui lòng xem mục [**Chạy ứng dụng với Docker**](#3-chạy-ứng-dụng-với-docker-khuyến-nghị) ở trên. Các lệnh `make` cung cấp đầy đủ các tác vụ cần thiết.
 
 ### Dịch Vụ Trong Docker
 
-- **Application** - Spring Boot app với PostgreSQL
-- **PostgreSQL 16** - Database chính với persistent volume
+- **api** - Spring Boot app với PostgreSQL
+- **PostgreSQL 15** - Database chính với persistent volume
 - **Redis 7** - Caching layer (sẵn sàng tích hợp)
 - **pgAdmin** - Database management interface
 
@@ -357,3 +358,41 @@ Dự án này đang trong quá trình phát triển cho mục đích học tập
 [📚 API Docs](http://localhost:8080/swagger-ui.html) • [🐳 Docker Setup](docker-compose.yml) • [🔧 Makefile Commands](Makefile)
 
 </div>
+
+### 5. Hướng dẫn cho người dùng Podman (Linux)
+
+Nếu bạn đang dùng Linux và muốn sử dụng Podman thay cho Docker, quy trình cũng tương tự.
+
+**Yêu cầu:**
+- ☑️ **Podman**
+- ☑️ **podman-compose**: Cần được cài đặt riêng. Ví dụ trên Fedora: `sudo dnf install podman-compose`. Trên các bản phân phối khác, vui lòng tham khảo tài liệu của chúng.
+
+**Các bước thực hiện:**
+
+1.  **Chuẩn bị file `.env`:** Vẫn thực hiện như Bước 1 của hướng dẫn Docker.
+    ```bash
+    cp env.example .env
+    # (Tùy chọn) Mở file .env để chỉnh sửa cấu hình
+    ```
+2.  **Khởi động môi trường với Podman:**
+    ```bash
+    make podman-dev
+    ```
+3.  **Các lệnh khác:**
+    -   Xem logs: `make podman-logs`
+    -   Dừng môi trường: `make podman-stop`
+    -   Dọn dẹp (xóa cả data): `make podman-clean`
+
+### 6. Truy cập ứng dụng (Local)
+
+- **Application**: http://localhost:8080
+- **Health Check**: http://localhost:8080/api/v1/health
+- **H2 Console**: http://localhost:8080/h2-console
+- **API Documentation**: http://localhost:8080/swagger-ui.html
+
+#### H2 Database Connection (Development)
+```
+URL: jdbc:h2:mem:simplecommerce_db
+Username: sa
+Password: (để trống)
+```
