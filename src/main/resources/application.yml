@@ -48,3 +48,7 @@ springdoc:
     enabled: true
     path: /swagger-ui.html
     operationsSorter: method
+
+# Frontend Configuration
+frontend:
+  url: ${FRONTEND_URL:http://localhost:5173}
