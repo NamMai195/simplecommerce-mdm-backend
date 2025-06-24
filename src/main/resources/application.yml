@@ -3,6 +3,8 @@ spring:
     active: dev
   application:
     name: simplecommerce-mdm-backend
+  jackson:
+    time-zone: Asia/Ho_Chi_Minh
   
   datasource:
     url: jdbc:h2:mem:simplecommerce_db
@@ -18,6 +20,8 @@ spring:
   jpa:
     properties:
       hibernate:
+        jdbc:
+          time_zone: Asia/Ho_Chi_Minh
         show_sql: false
         format_sql: false
         use_sql_comments: false
@@ -33,4 +37,14 @@ logging:
   level:
     com.simplecommerce_mdm: INFO
     org.springframework.security: WARN
-    org.hibernate.SQL: WARN 
+    org.hibernate.SQL: WARN
+
+# Swagger Configuration
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operationsSorter: method
