@@ -71,3 +71,22 @@ openapi:
 # Frontend Configuration
 frontend:
   url: http://localhost:5173
+
+# JWT Configuration
+jwt:
+  expiryMinutes: 60
+  expiryDay: 14
+  accessKey: ***REMOVED***
+  refreshKey: ***REMOVED***
+
+# Thêm cấu hình OAuth2 vào đây, đúng căn lề với các thuộc tính khác của spring
+security:
+  oauth2:
+    client:
+      registration:
+        google:
+          client-id: ***REMOVED***
+          client-secret: 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
+          scope:
+            - email
+            - profile
