@@ -1,23 +1,31 @@
 package com.simplecommerce_mdm.security;
 
+import com.simplecommerce_mdm.config.CustomizeRequestFilter;
 import io.micrometer.common.lang.NonNull;
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 @EnableWebSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
 
     @Value("${frontend.url}")
     private String frontendUrl;
+
+    private final CustomizeRequestFilter customizeRequestFilter;
+    private final AuthenticationProvider authenticationProvider;
 
     // Danh sách các đường dẫn công khai, không cần xác thực
     private static final String[] PUBLIC_PATHS = {
@@ -41,7 +49,9 @@ public class SecurityConfig {
                                 "/h2-console/**" // Cho phép H2 console
                         ).permitAll()
                         .anyRequest().authenticated())
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authenticationProvider(authenticationProvider)
+                .addFilterBefore(customizeRequestFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
