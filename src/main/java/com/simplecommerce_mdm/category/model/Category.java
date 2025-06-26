@@ -1,6 +1,7 @@
-package com.simplecommerce_mdm.product.model;
+package com.simplecommerce_mdm.category.model;
 
 import com.simplecommerce_mdm.common.domain.BaseEntity;
+import com.simplecommerce_mdm.product.model.Product;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
