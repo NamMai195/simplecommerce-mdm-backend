@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/simplecommerce_mdm
-    username: nammai
-    password: ***REMOVED***
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:simplecommerce_mdm}
+    username: ${POSTGRES_USER:nammai}
+    password: ${POSTGRES_PASSWORD:***REMOVED***}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -68,7 +68,7 @@ openapi:
 
 # Frontend Configuration
 frontend:
-  url: http://localhost:5173
+  url: ${FRONTEND_URL:http://localhost:5173}
 
 # JWT Configuration
 jwt:
@@ -88,3 +88,10 @@ security:
           scope:
             - email
             - profile
+
+# Brevo Email Service Configuration
+brevo:
+  api-key: ${BREVO_API_KEY}
+  sender:
+    email: no-reply@simplecommerce-dev.com
+    name: SimpleCommerce MDM (Dev)
