@@ -4,23 +4,25 @@ import com.simplecommerce_mdm.auth.dto.LoginRequest;
 import com.simplecommerce_mdm.auth.dto.RegisterRequest;
 import com.simplecommerce_mdm.auth.dto.TokenResponse;
 import com.simplecommerce_mdm.auth.service.AuthService;
-import com.simplecommerce_mdm.auth.service.AuthenticationService;
+import com.simplecommerce_mdm.auth.service.TokenService;
 import com.simplecommerce_mdm.user.model.User;
 import com.simplecommerce_mdm.user.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j(topic = "AUTH-SERVICE")
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
-    private final AuthenticationService authenticationService;
+    private final TokenService tokenService;
 
     @Override
     @Transactional
@@ -51,7 +53,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public TokenResponse login(LoginRequest loginrequest) {
-        return authenticationService.getAccessToken(loginrequest);
+        return tokenService.getAccessToken(loginrequest);
     }
 
     @Override
