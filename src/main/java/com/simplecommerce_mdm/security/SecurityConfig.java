@@ -30,8 +30,10 @@ public class SecurityConfig {
     // Danh sách các đường dẫn công khai, không cần xác thực
     private static final String[] PUBLIC_PATHS = {
             "/api/v1/auth/**",
+            "/api/v1/test-email/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",
+            "/swagger-ui.html",
             "/h2-console/**"
     };
 
@@ -41,13 +43,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())) // Cho phép H2 console frame
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(
-                                "/api/v1/auth/**",
-                                "/v3/api-docs/**",
-                                "/swagger-ui.html", // Cho phép file html cụ thể
-                                "/swagger-ui/**", // Cho phép các tài nguyên con của swagger
-                                "/h2-console/**" // Cho phép H2 console
-                        ).permitAll()
+                        .requestMatchers(PUBLIC_PATHS).permitAll()
                         .anyRequest().authenticated())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)

@@ -41,6 +41,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
       - JAVA_OPTS=${JAVA_OPTS}
       - FRONTEND_URL=${FRONTEND_URL}
+      - BREVO_API_KEY=${BREVO_API_KEY}
     volumes:
       - app_logs:/app/logs
     networks:
