@@ -3,7 +3,7 @@ package com.simplecommerce_mdm.auth.controller;
 
 import com.simplecommerce_mdm.auth.dto.LoginRequest;
 import com.simplecommerce_mdm.auth.dto.TokenResponse;
-import com.simplecommerce_mdm.auth.service.AuthenticationService;
+import com.simplecommerce_mdm.auth.service.TokenService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -15,24 +15,24 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@Tag(name = "Authentication Controller")
-@Slf4j(topic = "AUTHENTICATION-CONTROLLER")
+@Tag(name = "Token Controller")
+@Slf4j(topic = "TOKEN-CONTROLLER")
 @RequiredArgsConstructor
-public class AuthenticationController {
+public class TokenController {
 
-    private final AuthenticationService authenticationService;
+    private final TokenService tokenService;
 
     @Operation(summary = "Access token", description = "Get access token and refresh token by email and password")
     @PostMapping("/access-token")
     public TokenResponse accessToken(@RequestBody LoginRequest request) {
         log.info("Access token request");
-        return authenticationService.getAccessToken(request);
+        return tokenService.getAccessToken(request);
     }
 
     @Operation(summary = "Refresh token", description = "Get access token by refresh token")
     @PostMapping("/refresh-token")
     public TokenResponse refreshToken(@RequestBody String refreshToken) {
         log.info("Refresh token request");
-        return authenticationService.getRefreshToken(refreshToken);
+        return tokenService.getRefreshToken(refreshToken);
     }
 }

@@ -50,7 +50,7 @@ SimpleCommerce MDM (Master Data Management) Backend là nền tảng thương m�
 src/main/java/com/simplecommerce_mdm/
 ├── 🔐 auth/           # Authentication & Authorization
 │   ├── controller/    # AuthController
-│   ├── dto/          # UserRegistrationDto
+│   ├── dto/          # Request & Response
 │   └── service/      # AuthService & Implementation
 ├── 👤 user/           # User Management
 │   ├── model/        # User, Role, Permission, Address

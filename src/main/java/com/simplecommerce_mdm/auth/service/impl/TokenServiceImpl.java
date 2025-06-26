@@ -2,7 +2,7 @@ package com.simplecommerce_mdm.auth.service.impl;
 
 import com.simplecommerce_mdm.auth.dto.LoginRequest;
 import com.simplecommerce_mdm.auth.dto.TokenResponse;
-import com.simplecommerce_mdm.auth.service.AuthenticationService;
+import com.simplecommerce_mdm.auth.service.TokenService;
 import com.simplecommerce_mdm.auth.service.JwtService;
 import com.simplecommerce_mdm.exception.ForBiddenException;
 import com.simplecommerce_mdm.exception.InvalidDataException;
@@ -29,8 +29,8 @@ import static com.simplecommerce_mdm.common.enums.TokenType.REFRESH_TOKEN;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j(topic = "AUTHENTICATION-SERVICE")
-public class AuthenticationServiceImpl implements AuthenticationService {
+@Slf4j(topic = "TOKEN-SERVICE")
+public class TokenServiceImpl implements TokenService {
 
     private final JwtService jwtService;
     private final UserRepository userRepository;
