@@ -37,9 +37,11 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/simplecommerce_mdm
-      - SPRING_DATASOURCE_USERNAME=nammai
-      - SPRING_DATASOURCE_PASSWORD=***REMOVED***
-      - JAVA_OPTS=-Xmx512m -Xms256m
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+      - JAVA_OPTS=${JAVA_OPTS}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - BREVO_API_KEY=${BREVO_API_KEY}
     volumes:
       - app_logs:/app/logs:Z
     networks:
