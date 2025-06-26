@@ -17,7 +17,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     defer-datasource-initialization: true
     show-sql: true
     generate-ddl: true
@@ -27,8 +27,6 @@ spring:
         format_sql: true
         use_sql_comments: true
         default_schema: public
-        hbm2ddl:
-          auto: create-drop
         jdbc:
           time_zone: UTC+07:00
 
@@ -79,7 +77,7 @@ jwt:
   accessKey: QnaO9hBEdCb6nN2TY4dQqYhnDtc9FNHvfgSs2o7WzSk=
   refreshKey: lFLJoeiSFysXqkNsdda4kFSZ7c74+PJ2eVZ4ZGkZ8NA=
 
-# Thêm cấu hình OAuth2 vào đây, đúng căn lề với các thuộc tính khác của spring
+# Cấu hình OAuth2 (google)
 security:
   oauth2:
     client:
