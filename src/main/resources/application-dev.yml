@@ -37,6 +37,7 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.web: DEBUG
 
 management:
   endpoints:
@@ -95,3 +96,9 @@ brevo:
   sender:
     email: no-reply@simplecommerce-dev.com
     name: SimpleCommerce MDM (Dev)
+
+# Cloudinary configuration
+cloudinary:
+  cloud_name: ${CLOUDINARY_CLOUD_NAME}
+  api_key: ${CLOUDINARY_API_KEY}
+  api_secret: ${CLOUDINARY_API_SECRET}
