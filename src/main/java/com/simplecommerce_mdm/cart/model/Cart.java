@@ -28,9 +28,6 @@ public class Cart extends BaseEntity {
     @JoinColumn(name = "user_id", unique = true)
     private User user;
 
-    @Column(name = "session_id", unique = true, length = 255)
-    private String sessionId;
-
     @Column(name = "expires_at")
     private OffsetDateTime expiresAt;
 

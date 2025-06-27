@@ -1,5 +1,6 @@
 package com.simplecommerce_mdm.product.model;
 
+import com.simplecommerce_mdm.category.model.Category;
 import com.simplecommerce_mdm.common.domain.BaseEntity;
 import com.simplecommerce_mdm.common.enums.ProductStatus;
 import jakarta.persistence.*;
