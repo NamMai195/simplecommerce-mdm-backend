@@ -4,8 +4,10 @@ import com.simplecommerce_mdm.category.dto.CategoryRequest;
 import com.simplecommerce_mdm.category.dto.CategoryResponse;
 import com.simplecommerce_mdm.category.service.CategoryService;
 import com.simplecommerce_mdm.common.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -17,6 +19,8 @@ import java.util.List;
 @RequestMapping("/api/v1/admin/categories")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Category Admin Controller")
+@Slf4j(topic = "CATEGORY-ADMIN-CONTROLLER")
 public class CategoryAdminController {
 
     private final CategoryService categoryService;
