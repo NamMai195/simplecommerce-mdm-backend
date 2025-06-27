@@ -43,6 +43,14 @@ public class CustomizeRequestFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+        // --- TEMPORARY DEBUG LOGGING ---
+        System.out.println("--- RECEIVED REQUEST TO: " + request.getRequestURI() + " ---");
+        java.util.Collections.list(request.getHeaderNames())
+            .forEach(headerName -> 
+                System.out.println(headerName + ": " + request.getHeader(headerName))
+            );
+        System.out.println("--- END OF HEADERS ---");
+        // --- END OF DEBUG LOGGING ---
         log.info("{} {}", request.getMethod(), request.getRequestURI());
 
         try {
