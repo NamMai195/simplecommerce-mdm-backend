@@ -29,43 +29,31 @@ public class SecurityConfig {
     private final CustomizeRequestFilter customizeRequestFilter;
     private final AuthenticationProvider authenticationProvider;
 
-    // Danh sách các đường dẫn công khai, không cần xác thực
-    private static final String[] PUBLIC_PATHS = {
-            "/api/v1/auth/**",
-            "/api/v1/test-email/**",
-            "/v3/api-docs/**",
-            "/swagger-ui/**",
-            "/swagger-ui.html",
-            "/h2-console/**"
-    };
-
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())) // Cho phép H2 console frame
+                .addFilterBefore(customizeRequestFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_PATHS).permitAll()
-                        .anyRequest().authenticated())
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/webjars/**",
+                                "/swagger-ui.html",
+                                "/api/v1/categories/**",
+                                "/api/v1/test-email/**",
+                                "/h2-console/**",
+                                "/favicon.ico"
+                        ).permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN") // API Admin yêu cầu quyền ADMIN
+                        .anyRequest().authenticated() // Tất cả các request khác đều cần xác thực
+                )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authenticationProvider(authenticationProvider)
-                .addFilterBefore(customizeRequestFilter, UsernamePasswordAuthenticationFilter.class);
+                .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.sameOrigin())); // for H2 console
 
         return http.build();
-    }
-
-    @Bean
-    public WebSecurityCustomizer ignoreResources() {
-        return webSecurity -> webSecurity
-                .ignoring()
-                .requestMatchers(
-                        "/actuator/**",
-                        "/v3/**",
-                        "/webjars/**",
-                        "/swagger-ui*/*swagger-initializer.js",
-                        "/swagger-ui*/**",
-                        "/favicon.ico"
-                );
     }
 
     @Bean
