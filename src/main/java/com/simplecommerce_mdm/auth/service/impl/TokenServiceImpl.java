@@ -39,36 +39,36 @@ public class TokenServiceImpl implements TokenService {
     @Override
     public TokenResponse getAccessToken(LoginRequest request) {
         log.info("Get access token for email: {}", request.getEmail());
-
+    
         Authentication authenticate;
         try {
             // Thực hiện xác thực với email và password
             authenticate = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
-
+    
             log.info("isAuthenticated = {}", authenticate.isAuthenticated());
             log.info("Authorities: {}", authenticate.getAuthorities().toString());
-
+    
             // Nếu xác thực thành công, lưu thông tin vào SecurityContext
             SecurityContextHolder.getContext().setAuthentication(authenticate);
         } catch (BadCredentialsException | DisabledException e) {
             log.error("errorMessage: {}", e.getMessage());
             throw new AccessDeniedException(e.getMessage());
         }
-
+    
         // Lấy người dùng từ cơ sở dữ liệu để lấy ID
         var user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException(request.getEmail()));
-
+    
         // Lấy thông tin vai trò của người dùng từ đối tượng Authentication
         var authorities = authenticate.getAuthorities();
         String roles = authorities.stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.joining(","));
         log.info("User roles: {}", roles);
-
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), authorities);
-        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), authorities);
-
+    
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getFullName(), authorities);
+        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getFullName(), authorities);
+    
         return TokenResponse.builder().accessToken(accessToken).refreshToken(refreshToken).build();
     }
 
@@ -85,12 +85,12 @@ public class TokenServiceImpl implements TokenService {
             String userName = jwtService.extractUsername(refreshToken, REFRESH_TOKEN);
 
             // Kiểm tra người dùng đang hoạt động hay không hoạt động
-            User user = userRepository.findByEmail(userName)
+            User user = userRepository.findByFullName(userName)
                     .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + userName));
 
             // Tạo mã thông báo truy cập mới
             UserDetails userDetails = new com.simplecommerce_mdm.config.CustomUserDetails(user);
-            String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), userDetails.getAuthorities());
+            String accessToken = jwtService.generateAccessToken(user.getId(), user.getFullName(), userDetails.getAuthorities());
 
             return TokenResponse.builder().accessToken(accessToken).refreshToken(refreshToken).build();
         } catch (Exception e) {
