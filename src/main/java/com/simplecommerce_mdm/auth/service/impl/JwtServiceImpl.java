@@ -46,22 +46,22 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public String generateAccessToken(long userId, String username, Collection<? extends GrantedAuthority> authorities) {
         log.info("Generate access token for user {} with authorities {}", userId, authorities);
-
+    
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("role", authorities);
-
+    
         return generateToken(claims, username);
     }
-
+    
     @Override
     public String generateRefreshToken(long userId, String username, Collection<? extends GrantedAuthority> authorities) {
         log.info("Generate refresh token");
-
+    
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("role", authorities);
-
+    
         return generateRefreshToken(claims, username);
     }
 
