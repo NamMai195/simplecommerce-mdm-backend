@@ -268,7 +268,7 @@ spring:
   datasource:
     url: jdbc:postgresql://db:5432/simplecommerce_mdm
     username: nammai
-    password: ***REMOVED***
+    password: Nam@0917174910
 ```
 
 ### Makefile Commands

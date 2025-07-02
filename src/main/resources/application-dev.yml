@@ -1,3 +1,7 @@
+# ==============================================
+# Development Configuration - SECURE VERSION
+# All sensitive data moved to environment variables
+# ==============================================
 spring:
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:simplecommerce_mdm}
@@ -71,14 +75,14 @@ openapi:
 frontend:
   url: ${FRONTEND_URL:http://localhost:5173}
 
-# JWT Configuration
+# JWT Configuration - SECURE: Using environment variables only
 jwt:
   expiryMinutes: 60
   expiryDay: 14
   accessKey: ${JWT_ACCESS_KEY}
   refreshKey: ${JWT_REFRESH_KEY}
 
-# Cấu hình OAuth2 (google)
+# OAuth2 Configuration - SECURE: Using environment variables only
 security:
   oauth2:
     client:

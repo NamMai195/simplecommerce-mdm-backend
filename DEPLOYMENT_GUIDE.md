@@ -95,7 +95,7 @@ make dev-stop
 - **Application:** http://localhost:8080
 - **Health Check:** http://localhost:8080/api/v1/health  
 - **pgAdmin:** http://localhost:5050 (admin@simplecommerce.com / admin123)
-- **PostgreSQL:** localhost:5432 (nammai / ***REMOVED***)
+- **PostgreSQL:** localhost:5432 (nammai / Nam@0917174910)
 
 ## 🔧 Môi Trường Development
 

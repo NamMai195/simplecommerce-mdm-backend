@@ -14,7 +14,7 @@ NC='\033[0m' # No Color
 # Database configuration
 DB_NAME="simplecommerce_mdm"
 DB_USER="nammai"
-DB_PASSWORD="***REMOVED***"
+DB_PASSWORD="Nam@0917174910"
 DB_PORT="5432"
 CONTAINER_NAME="simplecommerce-db"
 
