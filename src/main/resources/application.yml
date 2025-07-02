@@ -55,7 +55,7 @@ frontend:
 
 # Brevo Email Service Configuration
 brevo:
-  api-key: "" # <-- IMPORTANT: REPLACE WITH YOUR REAL BREVO API KEY
+  api-key: ${BREVO_API_KEY:}
   sender:
     email: no-reply@simplecommerce.com
     name: SimpleCommerce MDM

@@ -34,6 +34,18 @@ spring:
         jdbc:
           time_zone: UTC+07:00
 
+  # OAuth2 Configuration - SECURE: Using environment variables only
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+
 logging:
   level:
     root: INFO
@@ -61,7 +73,6 @@ springdoc:
     path: /swagger-ui.html
   show-actuator: true
 
-
 # OpenAPI Configuration
 openapi:
   service:
@@ -82,26 +93,14 @@ jwt:
   accessKey: ${JWT_ACCESS_KEY}
   refreshKey: ${JWT_REFRESH_KEY}
 
-# OAuth2 Configuration - SECURE: Using environment variables only
-security:
-  oauth2:
-    client:
-      registration:
-        google:
-          client-id: ${GOOGLE_CLIENT_ID}
-          client-secret: ${GOOGLE_CLIENT_SECRET}
-          scope:
-            - email
-            - profile
-
-# Brevo Email Service Configuration
+# Brevo Email Service Configuration - SECURE: Using environment variables only
 brevo:
   api-key: ${BREVO_API_KEY}
   sender:
     email: no-reply@simplecommerce-dev.com
     name: SimpleCommerce MDM (Dev)
 
-# Cloudinary configuration
+# Cloudinary configuration - SECURE: Using environment variables only
 cloudinary:
   cloud_name: ${CLOUDINARY_CLOUD_NAME}
   api_key: ${CLOUDINARY_API_KEY}
