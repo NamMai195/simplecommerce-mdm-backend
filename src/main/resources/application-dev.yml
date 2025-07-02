@@ -1,8 +1,8 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:simplecommerce_mdm}
-    username: ${POSTGRES_USER:nammai}
-    password: ${POSTGRES_PASSWORD:***REMOVED***}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -75,8 +75,8 @@ frontend:
 jwt:
   expiryMinutes: 60
   expiryDay: 14
-  accessKey: ***REMOVED***
-  refreshKey: ***REMOVED***
+  accessKey: ${JWT_ACCESS_KEY}
+  refreshKey: ${JWT_REFRESH_KEY}
 
 # Cấu hình OAuth2 (google)
 security:
@@ -84,8 +84,8 @@ security:
     client:
       registration:
         google:
-          client-id: ***REMOVED***
-          client-secret: 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
+          client-id: ${GOOGLE_CLIENT_ID}
+          client-secret: ${GOOGLE_CLIENT_SECRET}
           scope:
             - email
             - profile
