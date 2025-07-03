@@ -1,8 +1,12 @@
+# ==============================================
+# Development Configuration - SECURE VERSION
+# All sensitive data moved to environment variables
+# ==============================================
 spring:
   datasource:
     url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:simplecommerce_mdm}
-    username: ${POSTGRES_USER:nammai}
-    password: ${POSTGRES_PASSWORD:Nam@0917174910}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
@@ -29,6 +33,18 @@ spring:
         default_schema: public
         jdbc:
           time_zone: UTC+07:00
+
+  # OAuth2 Configuration - SECURE: Using environment variables only
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
 
 logging:
   level:
@@ -57,7 +73,6 @@ springdoc:
     path: /swagger-ui.html
   show-actuator: true
 
-
 # OpenAPI Configuration
 openapi:
   service:
@@ -71,33 +86,21 @@ openapi:
 frontend:
   url: ${FRONTEND_URL:http://localhost:5173}
 
-# JWT Configuration
+# JWT Configuration - SECURE: Using environment variables only
 jwt:
   expiryMinutes: 60
   expiryDay: 14
-  accessKey: QnaO9hBEdCb6nN2TY4dQqYhnDtc9FNHvfgSs2o7WzSk=
-  refreshKey: lFLJoeiSFysXqkNsdda4kFSZ7c74+PJ2eVZ4ZGkZ8NA=
+  accessKey: ${JWT_ACCESS_KEY}
+  refreshKey: ${JWT_REFRESH_KEY}
 
-# Cấu hình OAuth2 (google)
-security:
-  oauth2:
-    client:
-      registration:
-        google:
-          client-id: 750325745930-gvk5ikmvg03dd77d0flac1s05p6pmi3c.apps.googleusercontent.com
-          client-secret: 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
-          scope:
-            - email
-            - profile
-
-# Brevo Email Service Configuration
+# Brevo Email Service Configuration - SECURE: Using environment variables only
 brevo:
   api-key: ${BREVO_API_KEY}
   sender:
     email: no-reply@simplecommerce-dev.com
     name: SimpleCommerce MDM (Dev)
 
-# Cloudinary configuration
+# Cloudinary configuration - SECURE: Using environment variables only
 cloudinary:
   cloud_name: ${CLOUDINARY_CLOUD_NAME}
   api_key: ${CLOUDINARY_API_KEY}
