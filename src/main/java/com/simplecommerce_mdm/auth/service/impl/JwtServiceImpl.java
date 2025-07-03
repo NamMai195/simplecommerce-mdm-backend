@@ -1,6 +1,5 @@
 package com.simplecommerce_mdm.auth.service.impl;
 
-
 import com.simplecommerce_mdm.auth.service.JwtService;
 import com.simplecommerce_mdm.common.enums.TokenType;
 import com.simplecommerce_mdm.exception.InvalidDataException;
@@ -45,47 +44,47 @@ public class JwtServiceImpl implements JwtService {
 
     @Override
     public String generateAccessToken(long userId, String username, Collection<? extends GrantedAuthority> authorities) {
-        log.info("Generate access token for user {} with authorities {}", userId, authorities);
-    
+        log.info("Generate access token for user {} (email: {}) with authorities {}", userId, username, authorities);
+
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("role", authorities);
-    
+
         return generateToken(claims, username);
     }
-    
+
     @Override
     public String generateRefreshToken(long userId, String username, Collection<? extends GrantedAuthority> authorities) {
-        log.info("Generate refresh token");
-    
+        log.info("Generate refresh token for user {} (email: {})", userId, username);
+
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("role", authorities);
-    
+
         return generateRefreshToken(claims, username);
     }
 
     @Override
-    public String extractUsername(String token, TokenType type) {
+    public String extractEmail(String token, TokenType type) {
         return extractClaim(token, type, Claims::getSubject);
     }
 
-    private String generateToken(Map<String, Object> claims, String username) {
+    private String generateToken(Map<String, Object> claims, String subject) {
         log.info("----------[ generateToken ]----------");
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(username)
+                .setSubject(subject) // Sử dụng subject (là email)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * expiryMinutes))
                 .signWith(getKey(ACCESS_TOKEN), SignatureAlgorithm.HS256)
                 .compact();
     }
 
-    private String generateRefreshToken(Map<String, Object> claims, String username) {
+    private String generateRefreshToken(Map<String, Object> claims, String subject) {
         log.info("----------[ generateRefreshToken ]----------");
         return Jwts.builder()
                 .setClaims(claims)
-                .setSubject(username)
+                .setSubject(subject)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
                 .setExpiration(new Date(System.currentTimeMillis() + 1000 * 60 * 60 * 24 * expiryDay))
                 .signWith(getKey(REFRESH_TOKEN), SignatureAlgorithm.HS256)
@@ -115,7 +114,7 @@ public class JwtServiceImpl implements JwtService {
         log.info("----------[ extraAllClaim ]----------");
         try {
             return Jwts.parserBuilder().setSigningKey(getKey(type)).build().parseClaimsJws(token).getBody();
-        } catch (SignatureException | ExpiredJwtException e) { // Invalid signature or expired token
+        } catch (SignatureException | ExpiredJwtException e) {
             throw new AccessDeniedException("Access denied: " + e.getMessage());
         }
     }
@@ -139,5 +138,4 @@ public class JwtServiceImpl implements JwtService {
             throw new AccessDeniedException("Token không hợp lệ hoặc đã hết hạn");
         }
     }
-
 }

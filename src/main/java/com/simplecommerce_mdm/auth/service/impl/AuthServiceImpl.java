@@ -74,24 +74,24 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public TokenResponse login(LoginRequest loginrequest) {
         logger.info("Login request for email: {}", loginrequest.getEmail());
-    
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginrequest.getEmail(), loginrequest.getPassword())
         );
-    
+
         CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
         User user = customUserDetails.getUser();
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-    
+
         logger.info("User authenticated successfully: {}", user.getFullName());
         logger.info("User ID: {}", user.getId());
 
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
-    
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getFullName(), authorities);
-        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getFullName(), authorities);
-    
+
+        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), authorities);
+        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), authorities);
+
         return TokenResponse.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
@@ -138,8 +138,8 @@ public class AuthServiceImpl implements AuthService {
             user.setLastLoginAt(LocalDateTime.now());
             userRepository.save(user);
 
-            String accessToken = jwtService.generateAccessToken(user.getId(), user.getFullName(), authorities);
-            String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getFullName(), authorities);
+            String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), authorities);
+            String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), authorities);
 
             logger.info("Generated tokens for user ID: {}", user.getId());
 
