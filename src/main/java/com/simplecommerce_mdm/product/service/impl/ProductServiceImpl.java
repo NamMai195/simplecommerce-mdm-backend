@@ -11,6 +11,8 @@ import com.simplecommerce_mdm.product.dto.ProductCreateRequest;
 import com.simplecommerce_mdm.product.dto.ProductListResponse;
 import com.simplecommerce_mdm.product.dto.ProductResponse;
 import com.simplecommerce_mdm.product.dto.ProductSearchRequest;
+import com.simplecommerce_mdm.product.dto.ProductUpdateRequest;
+import com.simplecommerce_mdm.product.dto.ProductVariantUpdateRequest;
 import com.simplecommerce_mdm.product.model.Product;
 import com.simplecommerce_mdm.product.model.ProductImage;
 import com.simplecommerce_mdm.product.model.ProductVariant;
@@ -34,6 +36,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
@@ -169,6 +172,214 @@ public class ProductServiceImpl implements ProductService {
                 .hasNext(productPage.hasNext())
                 .hasPrevious(productPage.hasPrevious())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductResponse getSellerProductById(Long productId, CustomUserDetails sellerDetails) {
+        User seller = sellerDetails.getUser();
+        log.info("Getting product {} for seller: {}", productId, seller.getEmail());
+
+        Shop shop = shopRepository.findByUser(seller)
+                .orElseThrow(() -> new ResourceNotFoundException("Shop not found for the current seller."));
+
+        // Find product by ID and shop (authorization check)
+        Product product = productRepository.findByIdAndShop(productId, shop)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id: " + productId + " or you don't have permission to access it."));
+
+        log.info("Found product: {} for seller: {}", product.getName(), seller.getEmail());
+        
+        return convertToProductResponse(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductResponse updateProduct(Long productId, ProductUpdateRequest updateRequest, List<MultipartFile> newImages, CustomUserDetails sellerDetails) {
+        User seller = sellerDetails.getUser();
+        log.info("Updating product {} for seller: {}", productId, seller.getEmail());
+
+        Shop shop = shopRepository.findByUser(seller)
+                .orElseThrow(() -> new ResourceNotFoundException("Shop not found for the current seller."));
+
+        // Find product by ID and shop (authorization check)
+        Product existingProduct = productRepository.findByIdAndShop(productId, shop)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id: " + productId + " or you don't have permission to access it."));
+
+        // Check if category exists
+        Category category = categoryRepository.findById(updateRequest.getCategoryId())
+                .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + updateRequest.getCategoryId()));
+
+        // Check if significant changes require approval reset
+        boolean needsReapproval = checkIfNeedsReapproval(existingProduct, updateRequest);
+
+        // Update basic product fields
+        existingProduct.setName(updateRequest.getName());
+        existingProduct.setDescription(updateRequest.getDescription());
+        existingProduct.setBasePrice(updateRequest.getBasePrice());
+        existingProduct.setCategory(category);
+        existingProduct.setSlug(generateSlug(updateRequest.getName()));
+        
+        // Update additional fields if provided
+        if (updateRequest.getAttributes() != null) {
+            existingProduct.setAttributes(updateRequest.getAttributes());
+        }
+        if (updateRequest.getWeightGrams() != null) {
+            existingProduct.setWeightGrams(updateRequest.getWeightGrams());
+        }
+        if (updateRequest.getDimensions() != null) {
+            existingProduct.setDimensions(updateRequest.getDimensions());
+        }
+
+        // Reset status if needed
+        if (needsReapproval && existingProduct.getStatus() == ProductStatus.APPROVED) {
+            existingProduct.setStatus(ProductStatus.PENDING_APPROVAL);
+            existingProduct.setApprovedAt(null);
+            log.info("Product status reset to PENDING_APPROVAL due to significant changes");
+        }
+
+        // Update variants
+        updateProductVariants(existingProduct, updateRequest.getVariants());
+
+        // Save product
+        Product savedProduct = productRepository.save(existingProduct);
+        log.info("Updated product with ID: {}", savedProduct.getId());
+
+        // Handle new images if provided
+        if (newImages != null && !newImages.isEmpty()) {
+            addNewProductImages(savedProduct, newImages);
+        }
+
+        return convertToProductResponse(savedProduct);
+    }
+
+    private boolean checkIfNeedsReapproval(Product existingProduct, ProductUpdateRequest updateRequest) {
+        // Check for significant changes that require re-approval
+        return !existingProduct.getName().equals(updateRequest.getName()) ||
+               !existingProduct.getBasePrice().equals(updateRequest.getBasePrice()) ||
+               !existingProduct.getCategory().getId().equals(updateRequest.getCategoryId());
+    }
+
+    private void updateProductVariants(Product product, List<ProductVariantUpdateRequest> variantRequests) {
+        Set<ProductVariant> existingVariants = product.getVariants();
+        Set<ProductVariant> updatedVariants = new HashSet<>();
+
+        // Process each variant request
+        for (ProductVariantUpdateRequest variantRequest : variantRequests) {
+            ProductVariant variant;
+            
+            if (variantRequest.getId() != null) {
+                // Update existing variant
+                variant = existingVariants.stream()
+                        .filter(v -> v.getId().equals(variantRequest.getId()))
+                        .findFirst()
+                        .orElseThrow(() -> new ResourceNotFoundException("Variant not found with id: " + variantRequest.getId()));
+                
+                // Update variant fields
+                variant.setSku(variantRequest.getSku());
+                variant.setFinalPrice(variantRequest.getFinalPrice());
+                variant.setCompareAtPrice(variantRequest.getCompareAtPrice());
+                variant.setStockQuantity(variantRequest.getStockQuantity());
+                variant.setOptions(variantRequest.getOptions() != null ? variantRequest.getOptions() : "{}");
+                
+                if (variantRequest.getReorderThreshold() != null) {
+                    variant.setReorderThreshold(variantRequest.getReorderThreshold());
+                }
+                if (variantRequest.getWeightGrams() != null) {
+                    variant.setWeightGrams(variantRequest.getWeightGrams());
+                }
+                if (variantRequest.getDimensions() != null) {
+                    variant.setDimensions(variantRequest.getDimensions());
+                }
+                if (variantRequest.getIsActive() != null) {
+                    variant.setIsActive(variantRequest.getIsActive());
+                }
+            } else {
+                // Create new variant
+                variant = ProductVariant.builder()
+                        .product(product)
+                        .sku(variantRequest.getSku())
+                        .finalPrice(variantRequest.getFinalPrice())
+                        .compareAtPrice(variantRequest.getCompareAtPrice())
+                        .stockQuantity(variantRequest.getStockQuantity())
+                        .options(variantRequest.getOptions() != null ? variantRequest.getOptions() : "{}")
+                        .reorderThreshold(variantRequest.getReorderThreshold() != null ? variantRequest.getReorderThreshold() : 0)
+                        .weightGrams(variantRequest.getWeightGrams())
+                        .dimensions(variantRequest.getDimensions())
+                        .isActive(variantRequest.getIsActive() != null ? variantRequest.getIsActive() : true)
+                        .build();
+            }
+            
+            updatedVariants.add(variant);
+        }
+
+        // Replace old variants with updated ones
+        // Note: JPA will handle deletion of removed variants due to cascade settings
+        product.getVariants().clear();
+        product.getVariants().addAll(updatedVariants);
+
+        log.info("Updated {} variants for product {}", updatedVariants.size(), product.getName());
+    }
+
+    private void addNewProductImages(Product product, List<MultipartFile> newImages) {
+        List<ProductImage> productImages = new ArrayList<>();
+        
+        final String productIdStr = product.getId().toString();
+        newImages.forEach(imageFile -> {
+            CloudinaryService.UploadResult uploadResult = cloudinaryService.uploadProductImage(imageFile, productIdStr);
+            log.info("Uploaded new image to Cloudinary with public_id: {}", uploadResult.publicId());
+
+            ProductImage productImage = ProductImage.builder()
+                    .targetId(product.getId())
+                    .targetType(ImageTargetType.PRODUCT)
+                    .cloudinaryPublicId(uploadResult.publicId())
+                    .build();
+            productImages.add(productImage);
+        });
+        
+        productImageRepository.saveAll(productImages);
+        log.info("Added {} new images to product {}", productImages.size(), product.getName());
+    }
+
+    @Override
+    @Transactional
+    public void deleteProduct(Long productId, CustomUserDetails sellerDetails) {
+        User seller = sellerDetails.getUser();
+        log.info("Deleting product {} for seller: {}", productId, seller.getEmail());
+
+        Shop shop = shopRepository.findByUser(seller)
+                .orElseThrow(() -> new ResourceNotFoundException("Shop not found for the current seller."));
+
+        // Find product by ID and shop (authorization check)
+        Product product = productRepository.findByIdAndShop(productId, shop)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id: " + productId + " or you don't have permission to access it."));
+
+        // Optional: Delete images from Cloudinary (uncomment if needed)
+        // cleanupProductImages(product);
+
+        // Soft delete the product (thanks to @SQLDelete annotation)
+        productRepository.delete(product);
+        
+        log.info("Successfully deleted product: {} (ID: {}) for seller: {}", 
+                product.getName(), productId, seller.getEmail());
+    }
+
+    // Optional method to cleanup Cloudinary images when deleting product
+    private void cleanupProductImages(Product product) {
+        List<ProductImage> productImages = productImageRepository.findByTargetIdAndTargetType(
+                product.getId(), ImageTargetType.PRODUCT);
+        
+        for (ProductImage productImage : productImages) {
+            try {
+                cloudinaryService.deleteFile(productImage.getCloudinaryPublicId());
+                log.info("Deleted image from Cloudinary: {}", productImage.getCloudinaryPublicId());
+            } catch (Exception e) {
+                log.warn("Failed to delete image from Cloudinary: {}, Error: {}", 
+                        productImage.getCloudinaryPublicId(), e.getMessage());
+            }
+        }
     }
 
     private ProductResponse convertToProductResponse(Product product) {
