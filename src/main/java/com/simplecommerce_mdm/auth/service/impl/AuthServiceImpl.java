@@ -34,6 +34,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.UUID;
 
 @Service
@@ -66,7 +67,7 @@ public class AuthServiceImpl implements AuthService {
 
         Role userRole = roleRepository.findByRoleName("USER")
              .orElseThrow(() -> new RuntimeException("Error: Role 'USER' is not found."));
-        user.setRoles(Collections.singleton(userRole));
+        user.setRoles(new HashSet<>(Collections.singletonList(userRole)));
 
         userRepository.save(user);
     }
@@ -172,7 +173,7 @@ public class AuthServiceImpl implements AuthService {
 
         Role userRole = roleRepository.findByRoleName("USER")
                 .orElseThrow(() -> new RuntimeException("Error: Role 'USER' not found."));
-        newUser.setRoles(Collections.singleton(userRole));
+        newUser.setRoles(new HashSet<>(Collections.singletonList(userRole)));
 
         return userRepository.save(newUser);
     }
