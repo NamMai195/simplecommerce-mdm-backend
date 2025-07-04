@@ -1,9 +1,5 @@
 version: '3.8'
 
-# Automatically load .env file for cross-platform compatibility
-env_file:
-  - .env
-
 services:
   # PostgreSQL Database
   db:
@@ -16,7 +12,6 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
     ports:
       - "5432:5432"
     volumes:
@@ -30,7 +25,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Application
+  # Application (Backend API - Spring Boot)
   api:
     build:
       context: .
@@ -38,6 +33,9 @@ services:
       target: runtime
     container_name: ${COMPOSE_PROJECT_NAME}-api
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
     env_file:
       - .env
     ports:
@@ -73,8 +71,6 @@ services:
     image: docker.io/redis:7-alpine
     container_name: simplecommerce-redis
     restart: unless-stopped
-    env_file:
-      - .env
     ports:
       - "6379:6379"
     volumes:
@@ -92,6 +88,8 @@ services:
     image: docker.io/dpage/pgadmin4:latest
     container_name: simplecommerce-pgadmin
     restart: unless-stopped
+    depends_on:
+      - db
     env_file:
       - .env
     environment:
@@ -117,4 +115,4 @@ volumes:
 
 networks:
   simplecommerce-network:
-    driver: bridge 
+    driver: bridge

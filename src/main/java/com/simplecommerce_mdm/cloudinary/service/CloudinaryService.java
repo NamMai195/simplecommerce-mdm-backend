@@ -50,7 +50,22 @@ public class CloudinaryService {
                 .collect(Collectors.toList());
     }
 
+    // --- PHƯƠNG THỨC ĐỂ LẤY URL ---
+    
+    /**
+     * Generate URL from Cloudinary public ID
+     * @param publicId The public ID of the uploaded file
+     * @return The secure URL to access the file
+     */
+    public String getImageUrl(String publicId) {
+        if (publicId == null || publicId.trim().isEmpty()) {
+            return null;
+        }
+        return cloudinary.url().secure(true).generate(publicId);
+    }
+
     // --- PHƯƠNG THỨC ĐỂ XÓA FILE ---
+    
     public void deleteFile(String publicId) {
         try {
             cloudinary.uploader().destroy(publicId, ObjectUtils.emptyMap());
