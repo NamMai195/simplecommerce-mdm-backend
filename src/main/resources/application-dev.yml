@@ -1,9 +1,13 @@
+# ==============================================
+# Development Configuration - SECURE VERSION
+# All sensitive data moved to environment variables
+# ==============================================
 spring:
   datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/simplecommerce_mdm}
-    username: ${SPRING_DATASOURCE_USERNAME:nammai}
-    password: ${SPRING_DATASOURCE_PASSWORD:Nam@0917174910}
-    driver-class-name: ${SPRING_DATASOURCE_DRIVER:org.postgresql.Driver}
+    url: jdbc:postgresql://localhost:${POSTGRES_PORT:5432}/${POSTGRES_DB:simplecommerce_mdm}
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
+    driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -17,7 +21,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     defer-datasource-initialization: true
     show-sql: true
     generate-ddl: true
@@ -27,10 +31,20 @@ spring:
         format_sql: true
         use_sql_comments: true
         default_schema: public
-        hbm2ddl:
-          auto: create-drop
         jdbc:
           time_zone: UTC+07:00
+
+  # OAuth2 Configuration - SECURE: Using environment variables only
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
 
 logging:
   level:
@@ -39,6 +53,7 @@ logging:
     org.springframework.security: DEBUG
     org.hibernate.SQL: DEBUG
     org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    org.springframework.web: DEBUG
 
 management:
   endpoints:
@@ -58,7 +73,6 @@ springdoc:
     path: /swagger-ui.html
   show-actuator: true
 
-
 # OpenAPI Configuration
 openapi:
   service:
@@ -71,3 +85,23 @@ openapi:
 # Frontend Configuration
 frontend:
   url: ${FRONTEND_URL:http://localhost:5173}
+
+# JWT Configuration - SECURE: Using environment variables only
+jwt:
+  expiryMinutes: 60
+  expiryDay: 14
+  accessKey: ${JWT_ACCESS_KEY}
+  refreshKey: ${JWT_REFRESH_KEY}
+
+# Brevo Email Service Configuration - SECURE: Using environment variables only
+brevo:
+  api-key: ${BREVO_API_KEY}
+  sender:
+    email: no-reply@simplecommerce-dev.com
+    name: SimpleCommerce MDM (Dev)
+
+# Cloudinary configuration - SECURE: Using environment variables only
+cloudinary:
+  cloud_name: ${CLOUDINARY_CLOUD_NAME}
+  api_key: ${CLOUDINARY_API_KEY}
+  api_secret: ${CLOUDINARY_API_SECRET}
