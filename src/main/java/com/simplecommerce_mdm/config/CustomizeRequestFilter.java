@@ -59,10 +59,10 @@ public class CustomizeRequestFilter extends OncePerRequestFilter {
                 String token = authHeader.substring(7);
                 log.info("token: {}...", token.substring(0, Math.min(token.length(), 20)));
 
-                String username = jwtService.extractUsername(token, TokenType.ACCESS_TOKEN);
-                log.info("username: {}", username);
+                String email = jwtService.extractEmail(token, TokenType.ACCESS_TOKEN);
+                log.info("username: {}", email);
 
-                UserDetails user = serviceDetail.loadUserByUsername(username);
+                UserDetails user = serviceDetail.loadUserByUsername(email);
 
                 SecurityContext context = SecurityContextHolder.createEmptyContext();
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(

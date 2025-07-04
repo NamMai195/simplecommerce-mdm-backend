@@ -82,11 +82,11 @@ public class TokenServiceImpl implements TokenService {
 
         try {
             // Xác minh mã thông báo
-            String userName = jwtService.extractUsername(refreshToken, REFRESH_TOKEN);
+            String email = jwtService.extractEmail(refreshToken, REFRESH_TOKEN);
 
             // Kiểm tra người dùng đang hoạt động hay không hoạt động
-            User user = userRepository.findByEmail(userName)
-                    .orElseThrow(() -> new UsernameNotFoundException("User not found with username: " + userName));
+            User user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
             // Tạo mã thông báo truy cập mới
             UserDetails userDetails = new com.simplecommerce_mdm.config.CustomUserDetails(user);

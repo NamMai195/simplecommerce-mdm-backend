@@ -1,11 +1,17 @@
 version: '3.8'
 
+# Automatically load .env file for cross-platform compatibility
+env_file:
+  - .env
+
 services:
   # PostgreSQL Database
   db:
     image: postgres:15-alpine
     container_name: ${COMPOSE_PROJECT_NAME}-db
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -32,6 +38,8 @@ services:
       target: runtime
     container_name: ${COMPOSE_PROJECT_NAME}-api
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "${SERVER_PORT}:8080"
     environment:
@@ -42,6 +50,13 @@ services:
       - JAVA_OPTS=${JAVA_OPTS}
       - FRONTEND_URL=${FRONTEND_URL}
       - BREVO_API_KEY=${BREVO_API_KEY}
+      - JWT_ACCESS_KEY=${JWT_ACCESS_KEY}
+      - JWT_REFRESH_KEY=${JWT_REFRESH_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
     volumes:
       - app_logs:/app/logs
     networks:
@@ -58,6 +73,8 @@ services:
     image: redis:7-alpine
     container_name: ${COMPOSE_PROJECT_NAME}-redis
     restart: unless-stopped
+    env_file:
+      - .env
     ports:
       - "${REDIS_PORT}:6379"
     volumes:
@@ -75,6 +92,8 @@ services:
     image: dpage/pgadmin4:latest
     container_name: ${COMPOSE_PROJECT_NAME}-pgadmin
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
