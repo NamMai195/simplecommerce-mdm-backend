@@ -1,0 +1,74 @@
+# =================================================================
+# Cấu hình CodeRabbit tối ưu cho Project Java/Spring Boot
+# Ngôn ngữ review: Tiếng Việt
+# =================================================================
+
+# Đặt ngôn ngữ review mặc định là tiếng Việt
+language: "vi"
+
+# Profile review: "Assertive" để đưa ra nhiều phản hồi chi tiết, sâu sắc,
+# phù hợp với người muốn code chất lượng cao, thay vì "Chill" (chỉ báo lỗi nghiêm trọng).
+profile: "Assertive"
+
+# Bật tính năng tóm tắt PR. Rất hữu ích.
+summarize: "true"
+
+# Bật tính năng tự động review khi PR được tạo.
+# Nếu bạn muốn tắt tạm thời cho một PR nào đó, hãy tạo nó ở dạng "Draft"
+# hoặc thêm [WIP] (Work In Progress) vào tiêu đề.
+auto_review:
+  enabled: true
+  ignore_title_keywords:
+    - "[WIP]"
+    - "[SKIP-REVIEW]"
+
+# Cấu hình cho phần "walkthrough" - bình luận tóm tắt tổng quan về PR
+walkthrough:
+  # Bật tóm tắt các file đã thay đổi
+  changed_files_summary: true
+  # Bật tạo biểu đồ tuần tự (sequence diagram) nếu có thể. Rất hay để visualize luồng logic.
+  sequence_diagrams: true
+  # Tắt các thứ không cần thiết để tránh "nhiễu"
+  poem: false
+
+# -----------------------------------------------------------------
+# PHẦN QUAN TRỌNG NHẤT: CHỈ DẪN CHO AI REVIEW
+# -----------------------------------------------------------------
+review_instructions: |
+  Bạn là một Lập trình viên cặp (AI Pair Programmer) người Việt, một chuyên gia về Java/Spring Boot và Clean Code.
+
+  Hãy review pull request này với sự tập trung cao độ vào các nguyên tắc sau:
+  1.  **Nguyên tắc cốt lõi**: Luôn kiểm tra các vi phạm nguyên tắc SOLID, DRY, KISS.
+  2.  **Xử lý Null**: Gợi ý sử dụng `java.util.Optional` thay vì trả về `null`.
+  3.  **Xử lý Exception**: Đảm bảo Exception được xử lý một cách tường minh, an toàn, tránh bắt `Exception` chung chung.
+  4.  **Hiệu năng**: Để ý các vấn đề về hiệu năng, đặc biệt là lỗi N+1 query trong Spring Data JPA.
+  5.  **Bảo mật**: Kiểm tra các lỗ hổng bảo mật phổ biến (ví dụ: hardcode secrets, nguy cơ SQL injection).
+  6.  **Kiểm thử**: Xác nhận logic mới có Unit Test (JUnit 5) đi kèm và các test case có ý nghĩa.
+
+  QUAN TRỌNG: Toàn bộ nội dung review, từ tóm tắt đến bình luận trên từng dòng, BẮT BUỘC phải bằng tiếng Việt.
+
+# Lọc file: Chỉ review các file code, bỏ qua các file build, docs, config...
+# Điều này giúp tiết kiệm thời gian và chi phí review, đồng thời giảm nhiễu.
+path_filters:
+  # Bao gồm tất cả các file trong src
+  - "src/**"
+  # Loại trừ các file không cần review
+  - "!target/**"
+  - "!*.md"
+  - "!pom.xml"
+  - "!mvnw"
+  - "!mvnw.cmd"
+  - "!.gitignore"
+  - "!.idea/**"
+  - "!*.yml"
+  - "!*.yaml"
+
+# Hướng dẫn cho việc gợi ý label
+labeling_instructions: |
+  Chỉ gợi ý các label sau đây dựa trên nội dung thay đổi của PR:
+  - `bug`: Khi PR sửa một lỗi.
+  - `feature`: Khi PR thêm một tính năng mới.
+  - `refactor`: Khi PR chỉ tái cấu trúc code mà không thay đổi hành vi.
+  - `docs`: Khi PR chỉ thay đổi tài liệu, comment.
+  - `test`: Khi PR chỉ thêm hoặc sửa test.
+  - `chore`: Khi PR thay đổi các công việc liên quan đến build, CI/CD.

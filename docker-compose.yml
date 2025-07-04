@@ -1,18 +1,20 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: ${COMPOSE_PROJECT_NAME}-db
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --lc-collate=C --lc-ctype=C"
+      LANG: en_US.utf8
+      LC_ALL: en_US.utf8
     ports:
-      - "${POSTGRES_PORT}:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - simplecommerce_data:/var/lib/postgresql/data
       - ./docker/postgres/init:/docker-entrypoint-initdb.d
@@ -23,24 +25,84 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
 
-  # Application
+  # Redis (for caching and sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-redis
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: >
+      sh -c "
+        if [ -n '${REDIS_PASSWORD}' ]; then
+          redis-server --requirepass '${REDIS_PASSWORD}' --appendonly yes
+        else
+          redis-server --appendonly yes
+        fi
+      "
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - simplecommerce-network
+    healthcheck:
+      test: |
+        if [ -n "${REDIS_PASSWORD}" ]; then
+          redis-cli -a "${REDIS_PASSWORD}" ping
+        else
+          redis-cli ping
+        fi
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Application (Backend API - Spring Boot)
   api:
     build: 
       context: .
       dockerfile: Containerfile
       target: runtime
+      args:
+        - JAVA_OPTS=${JAVA_OPTS:-"-Xmx512m -Xms256m"}
     container_name: ${COMPOSE_PROJECT_NAME}-api
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
     ports:
-      - "${SERVER_PORT}:8080"
+      - "${SERVER_PORT:-8080}:8080"
     environment:
-      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-dev}
       - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
       - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
       - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
-      - JAVA_OPTS=${JAVA_OPTS}
-      - FRONTEND_URL=${FRONTEND_URL}
+      - SPRING_DATASOURCE_DRIVER=${SPRING_DATASOURCE_DRIVER:-org.postgresql.Driver}
+      - JAVA_OPTS=${JAVA_OPTS:-"-Xmx512m -Xms256m"}
+      - SERVER_PORT=8080
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:5173}
+      - BREVO_API_KEY=${BREVO_API_KEY}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-86400000}
+      - JWT_REFRESH_EXPIRATION=${JWT_REFRESH_EXPIRATION:-604800000}
+      - JWT_ACCESS_KEY=${JWT_ACCESS_KEY}
+      - JWT_REFRESH_KEY=${JWT_REFRESH_KEY}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - LOG_FILE_PATH=${LOG_FILE_PATH:-/app/logs/simplecommerce-mdm.log}
     volumes:
       - app_logs:/app/logs
     networks:
@@ -50,52 +112,63 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
-
-  # Redis (for caching and sessions)
-  redis:
-    image: redis:7-alpine
-    container_name: ${COMPOSE_PROJECT_NAME}-redis
-    restart: unless-stopped
-    ports:
-      - "${REDIS_PORT}:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - simplecommerce-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      start_period: 90s
 
   # pgAdmin (Database Management Tool)
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: ${COMPOSE_PROJECT_NAME}-pgadmin
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
     environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@simplecommerce.com}
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
     ports:
-      - "${PGADMIN_PORT}:80"
+      - "${PGADMIN_PORT:-5050}:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
     networks:
       - simplecommerce-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/misc/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
 
 volumes:
   simplecommerce_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/postgres
   redis_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/redis
   pgadmin_data:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/pgadmin
   app_logs:
     driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./data/logs
 
 networks:
   simplecommerce-network:
     driver: bridge
-    name: simplecommerce-network 
+    name: ${COMPOSE_PROJECT_NAME:-simplecommerce}-network 
