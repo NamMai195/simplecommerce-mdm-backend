@@ -3,7 +3,9 @@ package com.simplecommerce_mdm.product.controller;
 import com.simplecommerce_mdm.common.dto.ApiResponse;
 import com.simplecommerce_mdm.config.CustomUserDetails;
 import com.simplecommerce_mdm.product.dto.ProductCreateRequest;
+import com.simplecommerce_mdm.product.dto.ProductListResponse;
 import com.simplecommerce_mdm.product.dto.ProductResponse;
+import com.simplecommerce_mdm.product.dto.ProductSearchRequest;
 import com.simplecommerce_mdm.product.service.ProductService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -40,5 +42,39 @@ public class ProductSellerController {
                 .build();
 
         return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<ProductListResponse>> getSellerProducts(
+            @RequestParam(defaultValue = "") String searchTerm,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(defaultValue = "10") Integer size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDirection,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        ProductSearchRequest searchRequest = new ProductSearchRequest();
+        searchRequest.setSearchTerm(searchTerm);
+        if (status != null && !status.trim().isEmpty()) {
+            try {
+                searchRequest.setStatus(com.simplecommerce_mdm.common.enums.ProductStatus.valueOf(status.toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                // Invalid status value, ignore it
+            }
+        }
+        searchRequest.setPage(page);
+        searchRequest.setSize(size);
+        searchRequest.setSortBy(sortBy);
+        searchRequest.setSortDirection(sortDirection);
+
+        ProductListResponse productList = productService.getSellerProducts(searchRequest, userDetails);
+
+        ApiResponse<ProductListResponse> response = ApiResponse.<ProductListResponse>builder()
+                .message("Products retrieved successfully")
+                .data(productList)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 } 

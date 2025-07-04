@@ -8,7 +8,9 @@ import com.simplecommerce_mdm.common.enums.ProductStatus;
 import com.simplecommerce_mdm.config.CustomUserDetails;
 import com.simplecommerce_mdm.exception.ResourceNotFoundException;
 import com.simplecommerce_mdm.product.dto.ProductCreateRequest;
+import com.simplecommerce_mdm.product.dto.ProductListResponse;
 import com.simplecommerce_mdm.product.dto.ProductResponse;
+import com.simplecommerce_mdm.product.dto.ProductSearchRequest;
 import com.simplecommerce_mdm.product.model.Product;
 import com.simplecommerce_mdm.product.model.ProductImage;
 import com.simplecommerce_mdm.product.model.ProductVariant;
@@ -21,8 +23,13 @@ import com.simplecommerce_mdm.user.model.User;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.Normalizer;
@@ -101,6 +108,81 @@ public class ProductServiceImpl implements ProductService {
         response.setImageUrls(imageUrls);
         response.setCategoryId(savedProduct.getCategory().getId());
         response.setShopId(savedProduct.getShop().getId());
+        
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductListResponse getSellerProducts(ProductSearchRequest searchRequest, CustomUserDetails sellerDetails) {
+        User seller = sellerDetails.getUser();
+        log.info("Getting products for seller: {}", seller.getEmail());
+
+        Shop shop = shopRepository.findByUser(seller)
+                .orElseThrow(() -> new ResourceNotFoundException("Shop not found for the current seller."));
+
+        // Create Pageable object with sorting
+        Sort sort = Sort.by(
+                "asc".equalsIgnoreCase(searchRequest.getSortDirection()) 
+                    ? Sort.Direction.ASC 
+                    : Sort.Direction.DESC,
+                searchRequest.getSortBy()
+        );
+        
+        Pageable pageable = PageRequest.of(
+                searchRequest.getPage(), 
+                searchRequest.getSize(), 
+                sort
+        );
+
+        // Query products based on search criteria
+        Page<Product> productPage;
+        
+        if (StringUtils.hasText(searchRequest.getSearchTerm()) && searchRequest.getStatus() != null) {
+            // Both search term and status filter
+            productPage = productRepository.findByShopAndStatusAndNameContaining(
+                    shop, searchRequest.getStatus(), searchRequest.getSearchTerm(), pageable);
+        } else if (StringUtils.hasText(searchRequest.getSearchTerm())) {
+            // Only search term
+            productPage = productRepository.findByShopAndNameContaining(
+                    shop, searchRequest.getSearchTerm(), pageable);
+        } else if (searchRequest.getStatus() != null) {
+            // Only status filter
+            productPage = productRepository.findByShopAndStatus(shop, searchRequest.getStatus(), pageable);
+        } else {
+            // No filters
+            productPage = productRepository.findByShop(shop, pageable);
+        }
+
+        // Convert to ProductResponse DTOs
+        List<ProductResponse> productResponses = productPage.getContent().stream()
+                .map(this::convertToProductResponse)
+                .collect(Collectors.toList());
+
+        // Build response with pagination metadata
+        return ProductListResponse.builder()
+                .products(productResponses)
+                .currentPage(productPage.getNumber())
+                .totalPages(productPage.getTotalPages())
+                .totalElements(productPage.getTotalElements())
+                .pageSize(productPage.getSize())
+                .hasNext(productPage.hasNext())
+                .hasPrevious(productPage.hasPrevious())
+                .build();
+    }
+
+    private ProductResponse convertToProductResponse(Product product) {
+        ProductResponse response = modelMapper.map(product, ProductResponse.class);
+        response.setCategoryId(product.getCategory().getId());
+        response.setShopId(product.getShop().getId());
+        
+        // Get image URLs for this product
+        List<ProductImage> productImages = productImageRepository.findByTargetIdAndTargetType(
+                product.getId(), ImageTargetType.PRODUCT);
+        List<String> imageUrls = productImages.stream()
+                .map(img -> cloudinaryService.getImageUrl(img.getCloudinaryPublicId()))
+                .collect(Collectors.toList());
+        response.setImageUrls(imageUrls);
         
         return response;
     }

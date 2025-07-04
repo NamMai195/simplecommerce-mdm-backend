@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   db:
-    image: docker.io/postgres:16-alpine
+    image: postgres:16-alpine
     container_name: ${COMPOSE_PROJECT_NAME:-simplecommerce}-db
     restart: unless-stopped
     env_file:
@@ -18,8 +16,8 @@ services:
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
-      - simplecommerce_data:/var/lib/postgresql/data:Z
-      - ./docker/postgres/init:/docker-entrypoint-initdb.d:Z,ro
+      - simplecommerce_data:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d
     networks:
       - simplecommerce-network
     healthcheck:
@@ -28,47 +26,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
-    security_opt:
-      - label=disable
 
-  # Redis (for caching and sessions)
-  redis:
-    image: docker.io/redis:7-alpine
-    container_name: ${COMPOSE_PROJECT_NAME:-simplecommerce}-redis
-    restart: unless-stopped
-    env_file:
-      - .env
-    command: >
-      sh -c "
-        if [ -n '${REDIS_PASSWORD}' ]; then
-          redis-server --requirepass '${REDIS_PASSWORD}' --appendonly yes --bind 0.0.0.0
-        else
-          redis-server --appendonly yes --bind 0.0.0.0
-        fi
-      "
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
-    volumes:
-      - redis_data:/data:Z
-    networks:
-      - simplecommerce-network
-    healthcheck:
-      test: |
-        if [ -n "${REDIS_PASSWORD}" ]; then
-          redis-cli -a "${REDIS_PASSWORD}" ping
-        else
-          redis-cli ping
-        fi
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-    security_opt:
-      - label=disable
-
-  # Application (Backend API - Spring Boot)
+  # Application  
   api:
-    build:
+    build: 
       context: .
       dockerfile: Containerfile
       target: runtime
@@ -110,7 +71,7 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - LOG_FILE_PATH=${LOG_FILE_PATH:-/app/logs/simplecommerce-mdm.log}
     volumes:
-      - app_logs:/app/logs:Z
+      - app_logs:/app/logs
     networks:
       - simplecommerce-network
     healthcheck:
@@ -119,12 +80,45 @@ services:
       timeout: 10s
       retries: 3
       start_period: 90s
-    security_opt:
-      - label=disable
+    profiles:
+      - with-api
+
+  # Redis (for caching and sessions)
+  redis:
+    image: redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME:-simplecommerce}-redis
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: >
+      sh -c "
+        if [ -n '${REDIS_PASSWORD}' ]; then
+          redis-server --requirepass '${REDIS_PASSWORD}' --appendonly yes --bind 0.0.0.0
+        else
+          redis-server --appendonly yes --bind 0.0.0.0
+        fi
+      "
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - simplecommerce-network
+    healthcheck:
+      test: |
+        if [ -n "${REDIS_PASSWORD}" ]; then
+          redis-cli -a "${REDIS_PASSWORD}" ping
+        else
+          redis-cli ping
+        fi
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   # pgAdmin (Database Management Tool)
   pgadmin:
-    image: docker.io/dpage/pgadmin4:latest
+    image: dpage/pgadmin4:latest
     container_name: ${COMPOSE_PROJECT_NAME:-simplecommerce}-pgadmin
     restart: unless-stopped
     depends_on:
@@ -137,11 +131,10 @@ services:
       PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
       PGADMIN_CONFIG_SERVER_MODE: 'False'
       PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
-      PGADMIN_DISABLE_POSTFIX: 'true'
     ports:
       - "${PGADMIN_PORT:-5050}:80"
     volumes:
-      - pgadmin_data:/var/lib/pgadmin:Z
+      - pgadmin_data:/var/lib/pgadmin
     networks:
       - simplecommerce-network
     healthcheck:
@@ -150,9 +143,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 60s
-    security_opt:
-      - label=disable
-    user: root
 
 volumes:
   simplecommerce_data:
@@ -167,3 +157,4 @@ volumes:
 networks:
   simplecommerce-network:
     driver: bridge
+    name: ${COMPOSE_PROJECT_NAME:-simplecommerce}-network 
