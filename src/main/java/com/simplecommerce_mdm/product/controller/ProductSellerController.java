@@ -6,9 +6,13 @@ import com.simplecommerce_mdm.product.dto.ProductCreateRequest;
 import com.simplecommerce_mdm.product.dto.ProductListResponse;
 import com.simplecommerce_mdm.product.dto.ProductResponse;
 import com.simplecommerce_mdm.product.dto.ProductSearchRequest;
+import com.simplecommerce_mdm.product.dto.ProductUpdateRequest;
 import com.simplecommerce_mdm.product.service.ProductService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,16 +27,40 @@ import java.util.List;
 @RequestMapping("/api/v1/seller/products")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('SELLER')")
+@Tag(name = "Product Seller Controller")
+@Slf4j(topic = "PRODUCT-SELLER-CONTROLLER")
 public class ProductSellerController {
 
     private final ProductService productService;
 
+    @PostMapping(consumes = {MediaType.APPLICATION_JSON_VALUE})
+    @Operation(summary = "Create Product (JSON)", description = "API create new product using JSON")
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
+            @Valid @RequestBody ProductCreateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        log.info("Creating product (JSON) for seller: {}", userDetails.getUser().getEmail());
+        
+        ProductResponse createdProduct = productService.createProduct(request, null, userDetails);
+
+        ApiResponse<ProductResponse> response = ApiResponse.<ProductResponse>builder()
+                .statusCode(HttpStatus.CREATED.value())
+                .message("Product created successfully and is pending approval.")
+                .data(createdProduct)
+                .build();
+
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
+
     @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @Operation(summary = "Create Product with Images", description = "API create new product with image upload")
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(
             @Valid @RequestPart("product") ProductCreateRequest request,
             @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
 
+        log.info("Creating product (Multipart) for seller: {}", userDetails.getUser().getEmail());
+        
         ProductResponse createdProduct = productService.createProduct(request, images, userDetails);
 
         ApiResponse<ProductResponse> response = ApiResponse.<ProductResponse>builder()
@@ -45,6 +73,7 @@ public class ProductSellerController {
     }
 
     @GetMapping
+    @Operation(summary = "Get Seller Products", description = "API get all products for seller with search and pagination")
     public ResponseEntity<ApiResponse<ProductListResponse>> getSellerProducts(
             @RequestParam(defaultValue = "") String searchTerm,
             @RequestParam(required = false) String status,
@@ -53,6 +82,8 @@ public class ProductSellerController {
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String sortDirection,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        log.info("Getting products for seller: {} with search: '{}'", userDetails.getUser().getEmail(), searchTerm);
 
         ProductSearchRequest searchRequest = new ProductSearchRequest();
         searchRequest.setSearchTerm(searchTerm);
@@ -73,6 +104,80 @@ public class ProductSellerController {
         ApiResponse<ProductListResponse> response = ApiResponse.<ProductListResponse>builder()
                 .message("Products retrieved successfully")
                 .data(productList)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Get Product by ID", description = "API get product detail by ID for seller")
+    public ResponseEntity<ApiResponse<ProductResponse>> getSellerProductById(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        log.info("Getting product {} for seller: {}", id, userDetails.getUser().getEmail());
+
+        ProductResponse product = productService.getSellerProductById(id, userDetails);
+
+        ApiResponse<ProductResponse> response = ApiResponse.<ProductResponse>builder()
+                .message("Product retrieved successfully")
+                .data(product)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping(value = "/{id}", consumes = {MediaType.APPLICATION_JSON_VALUE})
+    @Operation(summary = "Update Product (JSON)", description = "API update product using JSON")
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        log.info("Updating product {} (JSON) for seller: {}", id, userDetails.getUser().getEmail());
+
+        ProductResponse updatedProduct = productService.updateProduct(id, request, null, userDetails);
+
+        ApiResponse<ProductResponse> response = ApiResponse.<ProductResponse>builder()
+                .message("Product updated successfully")
+                .data(updatedProduct)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PutMapping(value = "/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE})
+    @Operation(summary = "Update Product with Images", description = "API update product with new image upload")
+    public ResponseEntity<ApiResponse<ProductResponse>> updateProduct(
+            @PathVariable Long id,
+            @Valid @RequestPart("product") ProductUpdateRequest request,
+            @RequestPart(value = "newImages", required = false) List<MultipartFile> newImages,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        log.info("Updating product {} (Multipart) for seller: {}", id, userDetails.getUser().getEmail());
+
+        ProductResponse updatedProduct = productService.updateProduct(id, request, newImages, userDetails);
+
+        ApiResponse<ProductResponse> response = ApiResponse.<ProductResponse>builder()
+                .message("Product updated successfully")
+                .data(updatedProduct)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "Delete Product", description = "API delete product for seller")
+    public ResponseEntity<ApiResponse<Void>> deleteProduct(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        log.info("Deleting product {} for seller: {}", id, userDetails.getUser().getEmail());
+
+        productService.deleteProduct(id, userDetails);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message("Product deleted successfully")
                 .build();
 
         return ResponseEntity.ok(response);
