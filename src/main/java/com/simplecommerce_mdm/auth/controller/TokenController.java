@@ -1,13 +1,14 @@
 package com.simplecommerce_mdm.auth.controller;
 
-
 import com.simplecommerce_mdm.auth.dto.LoginRequest;
 import com.simplecommerce_mdm.auth.dto.TokenResponse;
 import com.simplecommerce_mdm.auth.service.TokenService;
+import com.simplecommerce_mdm.common.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,15 +25,25 @@ public class TokenController {
 
     @Operation(summary = "Access token", description = "Get access token and refresh token by email and password")
     @PostMapping("/access-token")
-    public TokenResponse accessToken(@RequestBody LoginRequest request) {
+    public ResponseEntity<ApiResponse<TokenResponse>> accessToken(@RequestBody LoginRequest request) {
         log.info("Access token request");
-        return tokenService.getAccessToken(request);
+        TokenResponse tokenResponse = tokenService.getAccessToken(request);
+        ApiResponse<TokenResponse> response = ApiResponse.<TokenResponse>builder()
+                .message("Access token generated successfully")
+                .data(tokenResponse)
+                .build();
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Refresh token", description = "Get access token by refresh token")
     @PostMapping("/refresh-token")
-    public TokenResponse refreshToken(@RequestBody String refreshToken) {
+    public ResponseEntity<ApiResponse<TokenResponse>> refreshToken(@RequestBody String refreshToken) {
         log.info("Refresh token request");
-        return tokenService.getRefreshToken(refreshToken);
+        TokenResponse tokenResponse = tokenService.getRefreshToken(refreshToken);
+        ApiResponse<TokenResponse> response = ApiResponse.<TokenResponse>builder()
+                .message("Refresh token successful")
+                .data(tokenResponse)
+                .build();
+        return ResponseEntity.ok(response);
     }
 }
