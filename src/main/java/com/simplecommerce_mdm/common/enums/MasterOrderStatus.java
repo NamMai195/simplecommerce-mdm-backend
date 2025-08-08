@@ -2,10 +2,9 @@ package com.simplecommerce_mdm.common.enums;
 
 public enum MasterOrderStatus {
     PENDING_PAYMENT,
-    PAID,
-    PARTIALLY_PROCESSED,
-    FULLY_PROCESSED,
-    PARTIALLY_DELIVERED,
+    AWAITING_CONFIRMATION,
+    PROCESSING,
+    PARTIALLY_CANCELLED,
     COMPLETED,
     CANCELLED,
     REFUNDED

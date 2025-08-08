@@ -8,6 +8,8 @@ import com.simplecommerce_mdm.user.model.Role;
 import com.simplecommerce_mdm.user.model.User;
 import com.simplecommerce_mdm.user.repository.RoleRepository;
 import com.simplecommerce_mdm.user.repository.UserRepository;
+import com.simplecommerce_mdm.order.model.PaymentMethod;
+import com.simplecommerce_mdm.order.repository.PaymentMethodRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -28,6 +30,7 @@ public class DataInitializer implements CommandLineRunner {
     private final UserRepository userRepository;
     private final ShopRepository shopRepository;
     private final CategoryRepository categoryRepository;
+    private final PaymentMethodRepository paymentMethodRepository;
     private final PasswordEncoder passwordEncoder;
 
     private static final Pattern NONLATIN = Pattern.compile("[^\\w-]");
@@ -48,6 +51,9 @@ public class DataInitializer implements CommandLineRunner {
 
         // 4. Create sample shop for seller
         createSampleShop();
+
+        // 5. Create payment methods
+        createPaymentMethods();
 
         log.info("✅ Data Initializer: Finished initialization!");
     }
@@ -190,6 +196,40 @@ public class DataInitializer implements CommandLineRunner {
             log.info("✅ Created sample shop: {} for seller: {}", shop.getName(), sellerUser.get().getEmail());
         } else {
             log.info("⏭️ Sample shop already exists or seller not found. Skipping.");
+        }
+    }
+
+    private void createPaymentMethods() {
+        log.info("💳 Creating payment methods...");
+
+        // Create COD payment method
+        if (paymentMethodRepository.findByCode("COD").isEmpty()) {
+            PaymentMethod cod = PaymentMethod.builder()
+                    .name("Cash on Delivery")
+                    .code("COD")
+                    .description("Pay with cash when you receive your order")
+                    .isActive(true)
+                    .sortOrder(1)
+                    .build();
+            paymentMethodRepository.save(cod);
+            log.info("✅ Created payment method: COD (Cash on Delivery)");
+        } else {
+            log.info("⏭️ Payment method COD already exists. Skipping.");
+        }
+
+        // Create Bank Transfer payment method (for future use)
+        if (paymentMethodRepository.findByCode("BANK_TRANSFER").isEmpty()) {
+            PaymentMethod bankTransfer = PaymentMethod.builder()
+                    .name("Bank Transfer")
+                    .code("BANK_TRANSFER")
+                    .description("Transfer money to our bank account")
+                    .isActive(false) // Disabled for now
+                    .sortOrder(2)
+                    .build();
+            paymentMethodRepository.save(bankTransfer);
+            log.info("✅ Created payment method: BANK_TRANSFER (disabled)");
+        } else {
+            log.info("⏭️ Payment method BANK_TRANSFER already exists. Skipping.");
         }
     }
 
