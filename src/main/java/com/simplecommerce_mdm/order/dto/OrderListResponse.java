@@ -1,0 +1,45 @@
+package com.simplecommerce_mdm.order.dto;
+
+import com.simplecommerce_mdm.common.enums.OrderStatus;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class OrderListResponse {
+
+    private Long id;
+    private String orderNumber;
+    private String orderGroupNumber;
+    
+    // Shop info
+    private Long shopId;
+    private String shopName;
+    
+    // Customer info (for admin/seller view)
+    private String customerEmail;
+    
+    // Order status
+    private OrderStatus orderStatus;
+    
+    // Summary amounts
+    private BigDecimal subtotalAmount;
+    private BigDecimal shippingFee;
+    private BigDecimal totalAmount;
+    
+    // Order summary
+    private Integer totalItems;
+    private Integer totalQuantity;
+    
+    // Timestamps
+    private OffsetDateTime orderedAt;
+    private LocalDateTime createdAt;
+} 

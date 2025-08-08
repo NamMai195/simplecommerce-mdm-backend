@@ -17,6 +17,8 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     // Basic methods
     Optional<Shop> findByUser(User user);
     
+    Optional<Shop> findByUserId(Long userId);
+    
     // Admin search methods
     Page<Shop> findByIsActive(Boolean isActive, Pageable pageable);
     
