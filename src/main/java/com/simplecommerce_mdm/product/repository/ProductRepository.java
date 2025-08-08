@@ -59,4 +59,104 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                        @Param("sellerEmail") String sellerEmail,
                                        @Param("searchTerm") String searchTerm,
                                        Pageable pageable);
+
+    // Buyer/Public methods - Featured products
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.isFeatured = true " +
+           "AND p.status = 'APPROVED'")
+    Page<Product> findFeaturedProducts(Pageable pageable);
+    
+    // Buyer/Public methods - All approved products with search
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.status = 'APPROVED' " +
+           "AND (:searchTerm IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "     OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<Product> findApprovedProducts(@Param("searchTerm") String searchTerm, Pageable pageable);
+    
+    // Buyer/Public methods - Find approved product by ID
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.id = :id AND p.status = 'APPROVED'")
+    Optional<Product> findApprovedProductById(@Param("id") Long id);
+
+    // Buyer/Public methods - Products by category
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.status = 'APPROVED' " +
+           "AND p.category.id = :categoryId " +
+           "AND (:searchTerm IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<Product> findApprovedProductsByCategory(@Param("categoryId") Integer categoryId,
+                                                 @Param("searchTerm") String searchTerm,
+                                                 Pageable pageable);
+
+    // Buyer/Public methods - Products by shop
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.status = 'APPROVED' " +
+           "AND p.shop.id = :shopId " +
+           "AND (:searchTerm IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<Product> findApprovedProductsByShop(@Param("shopId") Long shopId,
+                                             @Param("searchTerm") String searchTerm,
+                                             Pageable pageable);
+
+    // Buyer/Public methods - Latest products (recently added)
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.status = 'APPROVED' " +
+           "ORDER BY p.createdAt DESC")
+    Page<Product> findLatestApprovedProducts(Pageable pageable);
+
+    // Buyer/Public methods - Products with price range filter
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.status = 'APPROVED' " +
+           "AND (:minPrice IS NULL OR p.basePrice >= :minPrice) " +
+           "AND (:maxPrice IS NULL OR p.basePrice <= :maxPrice) " +
+           "AND (:searchTerm IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<Product> findApprovedProductsByPriceRange(@Param("minPrice") java.math.BigDecimal minPrice,
+                                                   @Param("maxPrice") java.math.BigDecimal maxPrice,
+                                                   @Param("searchTerm") String searchTerm,
+                                                   Pageable pageable);
+
+    // Buyer/Public methods - Advanced filters (category + price + shop)
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.status = 'APPROVED' " +
+           "AND (:categoryId IS NULL OR p.category.id = :categoryId) " +
+           "AND (:shopId IS NULL OR p.shop.id = :shopId) " +
+           "AND (:minPrice IS NULL OR p.basePrice >= :minPrice) " +
+           "AND (:maxPrice IS NULL OR p.basePrice <= :maxPrice) " +
+           "AND (:searchTerm IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "     OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<Product> findApprovedProductsWithFilters(@Param("categoryId") Integer categoryId,
+                                                  @Param("shopId") Long shopId,
+                                                  @Param("minPrice") java.math.BigDecimal minPrice,
+                                                  @Param("maxPrice") java.math.BigDecimal maxPrice,
+                                                  @Param("searchTerm") String searchTerm,
+                                                  Pageable pageable);
+
+    // Buyer/Public methods - Related products (same category, exclude current product)
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.status = 'APPROVED' " +
+           "AND p.category.id = :categoryId " +
+           "AND p.id != :excludeProductId")
+    Page<Product> findRelatedProducts(@Param("categoryId") Integer categoryId,
+                                      @Param("excludeProductId") Long excludeProductId,
+                                      Pageable pageable);
+
+    // Buyer/Public methods - Get min and max prices for price range filter
+    @Query("SELECT MIN(p.basePrice), MAX(p.basePrice) FROM Product p WHERE p.status = 'APPROVED'")
+    Object[] findPriceRange();
 } 

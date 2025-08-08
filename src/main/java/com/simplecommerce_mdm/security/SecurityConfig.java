@@ -41,6 +41,7 @@ public class SecurityConfig {
                                 "/webjars/**",
                                 "/swagger-ui.html",
                                 "/api/v1/categories/**",
+                                "/api/v1/products/**", // Public product endpoints
                                 "/api/v1/test-email/**",
                                 "/api/v1/test/**",
                                 "/h2-console/**",

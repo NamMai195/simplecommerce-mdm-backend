@@ -1,10 +1,14 @@
 package com.simplecommerce_mdm.product.service;
 
 import com.simplecommerce_mdm.config.CustomUserDetails;
+import com.simplecommerce_mdm.product.dto.PriceRangeResponse;
 import com.simplecommerce_mdm.product.dto.ProductAdminResponse;
 import com.simplecommerce_mdm.product.dto.ProductAdminSearchRequest;
 import com.simplecommerce_mdm.product.dto.ProductApprovalRequest;
+import com.simplecommerce_mdm.product.dto.ProductBuyerListResponse;
+import com.simplecommerce_mdm.product.dto.ProductBuyerResponse;
 import com.simplecommerce_mdm.product.dto.ProductCreateRequest;
+import com.simplecommerce_mdm.product.dto.ProductFilterRequest;
 import com.simplecommerce_mdm.product.dto.ProductListResponse;
 import com.simplecommerce_mdm.product.dto.ProductResponse;
 import com.simplecommerce_mdm.product.dto.ProductSearchRequest;
@@ -34,5 +38,27 @@ public interface ProductService {
     ProductAdminResponse approveProduct(Long productId, CustomUserDetails adminDetails);
     
     ProductAdminResponse rejectProduct(Long productId, ProductApprovalRequest rejectionRequest, CustomUserDetails adminDetails);
+
+    // Buyer/Public methods
+    ProductBuyerListResponse getFeaturedProducts(Integer page, Integer size, String sortBy, String sortDirection);
+    
+    ProductBuyerListResponse getProducts(String searchTerm, Integer page, Integer size, String sortBy, String sortDirection);
+    
+    ProductBuyerResponse getProductById(Long productId);
+
+    // Additional buyer methods
+    ProductBuyerListResponse getProductsByCategory(Integer categoryId, String searchTerm, Integer page, Integer size, String sortBy, String sortDirection);
+    
+    ProductBuyerListResponse getProductsByShop(Long shopId, String searchTerm, Integer page, Integer size, String sortBy, String sortDirection);
+    
+    ProductBuyerListResponse getLatestProducts(Integer page, Integer size, String sortBy, String sortDirection);
+    
+    ProductBuyerListResponse getProductsByPriceRange(java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice, String searchTerm, Integer page, Integer size, String sortBy, String sortDirection);
+    
+    ProductBuyerListResponse getProductsWithFilters(ProductFilterRequest filterRequest);
+    
+    ProductBuyerListResponse getRelatedProducts(Long productId, Integer page, Integer size);
+    
+    PriceRangeResponse getPriceRange();
 
 } 
