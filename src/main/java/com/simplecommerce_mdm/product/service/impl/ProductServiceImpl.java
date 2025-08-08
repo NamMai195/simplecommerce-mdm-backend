@@ -7,12 +7,14 @@ import com.simplecommerce_mdm.common.enums.ImageTargetType;
 import com.simplecommerce_mdm.common.enums.ProductStatus;
 import com.simplecommerce_mdm.config.CustomUserDetails;
 import com.simplecommerce_mdm.exception.ResourceNotFoundException;
+import com.simplecommerce_mdm.product.dto.PriceRangeResponse;
 import com.simplecommerce_mdm.product.dto.ProductAdminResponse;
 import com.simplecommerce_mdm.product.dto.ProductAdminSearchRequest;
 import com.simplecommerce_mdm.product.dto.ProductApprovalRequest;
 import com.simplecommerce_mdm.product.dto.ProductBuyerListResponse;
 import com.simplecommerce_mdm.product.dto.ProductBuyerResponse;
 import com.simplecommerce_mdm.product.dto.ProductCreateRequest;
+import com.simplecommerce_mdm.product.dto.ProductFilterRequest;
 import com.simplecommerce_mdm.product.dto.ProductListResponse;
 import com.simplecommerce_mdm.product.dto.ProductResponse;
 import com.simplecommerce_mdm.product.dto.ProductSearchRequest;
@@ -660,6 +662,153 @@ public class ProductServiceImpl implements ProductService {
                 .collect(Collectors.toList());
         response.setImageUrls(imageUrls);
         
+        return response;
+    }
+
+    // ===== ADDITIONAL BUYER METHODS =====
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductBuyerListResponse getProductsByCategory(Integer categoryId, String searchTerm, Integer page, Integer size, String sortBy, String sortDirection) {
+        log.info("Getting products by category: categoryId={}, searchTerm='{}', page={}, size={}", 
+                 categoryId, searchTerm, page, size);
+
+        Sort sort = sortDirection.equalsIgnoreCase("desc") 
+            ? Sort.by(sortBy).descending() 
+            : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Product> productPage = productRepository.findApprovedProductsByCategory(categoryId, searchTerm, pageable);
+
+        return buildProductBuyerListResponse(productPage);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductBuyerListResponse getProductsByShop(Long shopId, String searchTerm, Integer page, Integer size, String sortBy, String sortDirection) {
+        log.info("Getting products by shop: shopId={}, searchTerm='{}', page={}, size={}", 
+                 shopId, searchTerm, page, size);
+
+        Sort sort = sortDirection.equalsIgnoreCase("desc") 
+            ? Sort.by(sortBy).descending() 
+            : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Product> productPage = productRepository.findApprovedProductsByShop(shopId, searchTerm, pageable);
+
+        return buildProductBuyerListResponse(productPage);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductBuyerListResponse getLatestProducts(Integer page, Integer size, String sortBy, String sortDirection) {
+        log.info("Getting latest products: page={}, size={}, sortBy={}, sortDirection={}", 
+                 page, size, sortBy, sortDirection);
+
+        // For latest products, we always sort by createdAt DESC regardless of params
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<Product> productPage = productRepository.findLatestApprovedProducts(pageable);
+
+        return buildProductBuyerListResponse(productPage);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductBuyerListResponse getProductsByPriceRange(java.math.BigDecimal minPrice, java.math.BigDecimal maxPrice, String searchTerm, Integer page, Integer size, String sortBy, String sortDirection) {
+        log.info("Getting products by price range: minPrice={}, maxPrice={}, searchTerm='{}', page={}, size={}", 
+                 minPrice, maxPrice, searchTerm, page, size);
+
+        Sort sort = sortDirection.equalsIgnoreCase("desc") 
+            ? Sort.by(sortBy).descending() 
+            : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<Product> productPage = productRepository.findApprovedProductsByPriceRange(minPrice, maxPrice, searchTerm, pageable);
+
+        return buildProductBuyerListResponse(productPage);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductBuyerListResponse getProductsWithFilters(ProductFilterRequest filterRequest) {
+        log.info("Getting products with filters: {}", filterRequest);
+
+        Sort sort = filterRequest.getSortDirection().equalsIgnoreCase("desc") 
+            ? Sort.by(filterRequest.getSortBy()).descending() 
+            : Sort.by(filterRequest.getSortBy()).ascending();
+        Pageable pageable = PageRequest.of(filterRequest.getPage(), filterRequest.getSize(), sort);
+
+        Page<Product> productPage = productRepository.findApprovedProductsWithFilters(
+                filterRequest.getCategoryId(),
+                filterRequest.getShopId(),
+                filterRequest.getMinPrice(),
+                filterRequest.getMaxPrice(),
+                filterRequest.getSearchTerm(),
+                pageable);
+
+        return buildProductBuyerListResponse(productPage);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductBuyerListResponse getRelatedProducts(Long productId, Integer page, Integer size) {
+        log.info("Getting related products for productId: {}, page={}, size={}", productId, page, size);
+
+        // First get the product to find its category
+        Product product = productRepository.findApprovedProductById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
+
+        if (product.getCategory() == null) {
+            log.warn("Product {} has no category, returning empty result", productId);
+            return new ProductBuyerListResponse();
+        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+
+        Page<Product> productPage = productRepository.findRelatedProducts(
+                product.getCategory().getId(), productId, pageable);
+
+        return buildProductBuyerListResponse(productPage);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PriceRangeResponse getPriceRange() {
+        log.info("Getting price range for all approved products");
+
+        Object[] result = productRepository.findPriceRange();
+        
+        PriceRangeResponse response = new PriceRangeResponse();
+        if (result != null && result.length == 2) {
+            response.setMinPrice((java.math.BigDecimal) result[0]);
+            response.setMaxPrice((java.math.BigDecimal) result[1]);
+        } else {
+            // Default values if no products found
+            response.setMinPrice(java.math.BigDecimal.ZERO);
+            response.setMaxPrice(java.math.BigDecimal.ZERO);
+        }
+
+        log.info("Price range: min={}, max={}", response.getMinPrice(), response.getMaxPrice());
+        return response;
+    }
+
+    // Helper method to build ProductBuyerListResponse from Page<Product>
+    private ProductBuyerListResponse buildProductBuyerListResponse(Page<Product> productPage) {
+        List<ProductBuyerResponse> buyerProducts = productPage.getContent().stream()
+                .map(this::convertToProductBuyerResponse)
+                .collect(Collectors.toList());
+
+        ProductBuyerListResponse response = new ProductBuyerListResponse();
+        response.setProducts(buyerProducts);
+        response.setCurrentPage(productPage.getNumber());
+        response.setTotalPages(productPage.getTotalPages());
+        response.setTotalElements(productPage.getTotalElements());
+        response.setPageSize(productPage.getSize());
+        response.setHasNext(productPage.hasNext());
+        response.setHasPrevious(productPage.hasPrevious());
+
+        log.info("Found {} products", buyerProducts.size());
         return response;
     }
 } 
