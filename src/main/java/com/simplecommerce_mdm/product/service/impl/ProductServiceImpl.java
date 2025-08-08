@@ -7,6 +7,9 @@ import com.simplecommerce_mdm.common.enums.ImageTargetType;
 import com.simplecommerce_mdm.common.enums.ProductStatus;
 import com.simplecommerce_mdm.config.CustomUserDetails;
 import com.simplecommerce_mdm.exception.ResourceNotFoundException;
+import com.simplecommerce_mdm.product.dto.ProductAdminResponse;
+import com.simplecommerce_mdm.product.dto.ProductAdminSearchRequest;
+import com.simplecommerce_mdm.product.dto.ProductApprovalRequest;
 import com.simplecommerce_mdm.product.dto.ProductCreateRequest;
 import com.simplecommerce_mdm.product.dto.ProductListResponse;
 import com.simplecommerce_mdm.product.dto.ProductResponse;
@@ -35,6 +38,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.text.Normalizer;
+import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -406,5 +410,127 @@ public class ProductServiceImpl implements ProductService {
         String normalized = Normalizer.normalize(nowhitespace, Normalizer.Form.NFD);
         String slug = NONLATIN.matcher(normalized).replaceAll("");
         return slug.toLowerCase(Locale.ENGLISH);
+    }
+
+    // ============================ ADMIN METHODS ============================
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<ProductAdminResponse> getProductsForAdmin(ProductAdminSearchRequest searchRequest) {
+        log.info("Getting products for admin with filters: status={}, shopId={}, category={}, search='{}'", 
+                searchRequest.getStatus(), searchRequest.getShopId(), searchRequest.getCategoryId(), searchRequest.getSearchTerm());
+
+        // Create Pageable object with sorting
+        Sort sort = Sort.by(
+                "asc".equalsIgnoreCase(searchRequest.getSortDirection()) 
+                    ? Sort.Direction.ASC 
+                    : Sort.Direction.DESC,
+                searchRequest.getSortBy()
+        );
+        
+        Pageable pageable = PageRequest.of(
+                searchRequest.getPage(), 
+                searchRequest.getSize(), 
+                sort
+        );
+
+        Page<Product> productPage = productRepository.findProductsForAdmin(
+                searchRequest.getStatus(),
+                searchRequest.getShopId(),
+                searchRequest.getCategoryId(),
+                searchRequest.getSellerEmail(),
+                searchRequest.getSearchTerm(),
+                pageable
+        );
+
+        return productPage.map(this::convertToProductAdminResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductAdminResponse getProductByIdForAdmin(Long productId) {
+        log.info("Getting product {} for admin", productId);
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+
+        return convertToProductAdminResponse(product);
+    }
+
+    @Override
+    @Transactional
+    public ProductAdminResponse approveProduct(Long productId, CustomUserDetails adminDetails) {
+        User admin = adminDetails.getUser();
+        log.info("Admin {} approving product {}", admin.getEmail(), productId);
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+
+        if (product.getStatus() != ProductStatus.PENDING_APPROVAL) {
+            throw new IllegalStateException("Product is not in PENDING_APPROVAL status. Current status: " + product.getStatus());
+        }
+
+        product.setStatus(ProductStatus.APPROVED);
+        product.setApprovedAt(OffsetDateTime.now());
+        product.setRejectionReason(null); // Clear any previous rejection reason
+        
+        Product savedProduct = productRepository.save(product);
+        log.info("Product {} approved successfully by admin {}", productId, admin.getEmail());
+
+        return convertToProductAdminResponse(savedProduct);
+    }
+
+    @Override
+    @Transactional
+    public ProductAdminResponse rejectProduct(Long productId, ProductApprovalRequest rejectionRequest, CustomUserDetails adminDetails) {
+        User admin = adminDetails.getUser();
+        log.info("Admin {} rejecting product {} with reason: {}", admin.getEmail(), productId, rejectionRequest.getRejectionReason());
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + productId));
+
+        if (product.getStatus() != ProductStatus.PENDING_APPROVAL) {
+            throw new IllegalStateException("Product is not in PENDING_APPROVAL status. Current status: " + product.getStatus());
+        }
+
+        product.setStatus(ProductStatus.REJECTED);
+        product.setRejectionReason(rejectionRequest.getRejectionReason());
+        product.setApprovedAt(null); // Clear any previous approval date
+        
+        Product savedProduct = productRepository.save(product);
+        log.info("Product {} rejected successfully by admin {}", productId, admin.getEmail());
+
+        return convertToProductAdminResponse(savedProduct);
+    }
+
+    private ProductAdminResponse convertToProductAdminResponse(Product product) {
+        ProductAdminResponse response = modelMapper.map(product, ProductAdminResponse.class);
+        
+        // Set basic IDs
+        response.setCategoryId(product.getCategory().getId());
+        response.setCategoryName(product.getCategory().getName());
+        response.setShopId(product.getShop().getId());
+        response.setShopName(product.getShop().getName());
+        response.setSellerEmail(product.getShop().getUser().getEmail());
+        
+        // Map variants with more details for admin
+        List<ProductAdminResponse.ProductVariantAdminResponse> variantResponses = product.getVariants().stream()
+                .map(variant -> {
+                    ProductAdminResponse.ProductVariantAdminResponse variantResponse = 
+                            modelMapper.map(variant, ProductAdminResponse.ProductVariantAdminResponse.class);
+                    return variantResponse;
+                })
+                .collect(Collectors.toList());
+        response.setVariants(variantResponses);
+        
+        // Get image URLs for this product
+        List<ProductImage> productImages = productImageRepository.findByTargetIdAndTargetType(
+                product.getId(), ImageTargetType.PRODUCT);
+        List<String> imageUrls = productImages.stream()
+                .map(img -> cloudinaryService.getImageUrl(img.getCloudinaryPublicId()))
+                .collect(Collectors.toList());
+        response.setImageUrls(imageUrls);
+        
+        return response;
     }
 } 
