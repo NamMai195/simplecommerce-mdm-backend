@@ -68,6 +68,9 @@ public class Shop extends BaseEntity {
     @Column(name = "approved_at")
     private OffsetDateTime approvedAt;
 
+    @Column(name = "rejection_reason", columnDefinition = "TEXT")
+    private String rejectionReason;
+
     @OneToMany(mappedBy = "shop", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Builder.Default
     private Set<Product> products = new HashSet<>();
