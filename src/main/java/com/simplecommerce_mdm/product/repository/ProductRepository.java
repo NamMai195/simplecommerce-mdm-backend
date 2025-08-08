@@ -38,4 +38,25 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                                        @Param("status") ProductStatus status,
                                                        @Param("searchTerm") String searchTerm, 
                                                        Pageable pageable);
+    
+    // Admin methods - find all products by status
+    Page<Product> findByStatus(ProductStatus status, Pageable pageable);
+    
+    // Admin methods - complex search for admin with joins
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH s.user u " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE (:status IS NULL OR p.status = :status) " +
+           "AND (:shopId IS NULL OR s.id = :shopId) " +
+           "AND (:categoryId IS NULL OR c.id = :categoryId) " +
+           "AND (:sellerEmail IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :sellerEmail, '%'))) " +
+           "AND (:searchTerm IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "     OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<Product> findProductsForAdmin(@Param("status") ProductStatus status,
+                                       @Param("shopId") Long shopId,
+                                       @Param("categoryId") Integer categoryId,
+                                       @Param("sellerEmail") String sellerEmail,
+                                       @Param("searchTerm") String searchTerm,
+                                       Pageable pageable);
 } 
