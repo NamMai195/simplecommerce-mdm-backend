@@ -1,6 +1,5 @@
 package com.simplecommerce_mdm.shop.service.impl;
 
-import com.simplecommerce_mdm.cloudinary.service.CloudinaryService;
 import com.simplecommerce_mdm.config.CustomUserDetails;
 import com.simplecommerce_mdm.exception.ResourceNotFoundException;
 import com.simplecommerce_mdm.product.model.Shop;
@@ -20,12 +19,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
 
-import java.text.Normalizer;
 import java.time.OffsetDateTime;
-import java.util.Locale;
-import java.util.regex.Pattern;
 
 @Slf4j
 @Service
@@ -35,36 +30,28 @@ public class ShopServiceImpl implements ShopService {
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-    private final CloudinaryService cloudinaryService;
     private final ModelMapper modelMapper;
 
     @Override
     @Transactional
     public ShopResponse createShop(ShopCreateRequest createRequest, CustomUserDetails userDetails) {
-        log.info("Creating shop for user: {}", userDetails.getUser().getEmail());
-
         User user = userDetails.getUser();
         
-        // Check if user already has a shop
         if (shopRepository.findByUser(user).isPresent()) {
             throw new IllegalStateException("User already has a shop");
         }
 
-        // Create shop entity
         Shop shop = Shop.builder()
                 .user(user)
                 .name(createRequest.getName())
-                .slug(generateSlug(createRequest.getName()))
+                .slug(createRequest.getName().toLowerCase().replaceAll("\\s+", "-"))
                 .description(createRequest.getDescription())
                 .contactEmail(createRequest.getContactEmail())
                 .contactPhone(createRequest.getContactPhone())
-                .isActive(false) // Pending approval
+                .isActive(false)
                 .build();
 
         Shop savedShop = shopRepository.save(shop);
-        
-        log.info("Shop created successfully with ID: {} for user: {}", savedShop.getId(), user.getEmail());
-        
         return convertToShopResponse(savedShop);
     }
 
@@ -73,7 +60,6 @@ public class ShopServiceImpl implements ShopService {
     public ShopResponse getUserShop(CustomUserDetails userDetails) {
         Shop shop = shopRepository.findByUser(userDetails.getUser())
                 .orElseThrow(() -> new ResourceNotFoundException("User has no shop"));
-        
         return convertToShopResponse(shop);
     }
 
@@ -84,14 +70,11 @@ public class ShopServiceImpl implements ShopService {
                 .orElseThrow(() -> new ResourceNotFoundException("User has no shop"));
         
         if (shop.getIsActive()) {
-            throw new IllegalStateException("Cannot update approved shop. Use seller update endpoint.");
+            throw new IllegalStateException("Cannot update approved shop");
         }
         
         shop.setName(updateRequest.getName());
-        shop.setSlug(generateSlug(updateRequest.getName()));
         shop.setDescription(updateRequest.getDescription());
-        shop.setContactEmail(updateRequest.getContactEmail());
-        shop.setContactPhone(updateRequest.getContactPhone());
         
         Shop savedShop = shopRepository.save(shop);
         return convertToShopResponse(savedShop);
@@ -123,15 +106,12 @@ public class ShopServiceImpl implements ShopService {
     public ShopAdminResponse getShopByIdForAdmin(Long shopId) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shop not found: " + shopId));
-        
         return convertToShopAdminResponse(shop);
     }
 
     @Override
     @Transactional
     public ShopAdminResponse approveShop(Long shopId, ShopApprovalRequest approvalRequest, CustomUserDetails adminDetails) {
-        log.info("Admin {} approving shop: {}", adminDetails.getUser().getEmail(), shopId);
-        
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new ResourceNotFoundException("Shop not found: " + shopId));
         
@@ -140,9 +120,9 @@ public class ShopServiceImpl implements ShopService {
         shop.setApprovedAt(OffsetDateTime.now());
         shop.setRejectionReason(null);
         
-        // **AUTO ADD SELLER ROLE**
+        // AUTO ADD SELLER ROLE - Fixed method name
         User seller = shop.getUser();
-        Role sellerRole = roleRepository.findByName("SELLER")
+        Role sellerRole = roleRepository.findByRoleName("SELLER")
                 .orElseThrow(() -> new ResourceNotFoundException("SELLER role not found"));
         
         if (!seller.getRoles().contains(sellerRole)) {
@@ -152,8 +132,6 @@ public class ShopServiceImpl implements ShopService {
         }
         
         Shop savedShop = shopRepository.save(shop);
-        
-        log.info("Shop approved successfully: {}", shopId);
         return convertToShopAdminResponse(savedShop);
     }
 
@@ -232,26 +210,10 @@ public class ShopServiceImpl implements ShopService {
     }
 
     // Helper methods
-    private String generateSlug(String name) {
-        if (!StringUtils.hasText(name)) {
-            return "";
-        }
-        
-        String normalized = Normalizer.normalize(name, Normalizer.Form.NFD);
-        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
-        return pattern.matcher(normalized).replaceAll("")
-                .toLowerCase(Locale.ROOT)
-                .replaceAll("[^a-z0-9\\s-]", "")
-                .replaceAll("\\s+", "-")
-                .replaceAll("-+", "-")
-                .replaceAll("^-+|-+$", "");
-    }
-
     private Boolean parseStatusFilter(String status) {
         if (status == null || status.trim().isEmpty()) {
             return null;
         }
-        
         return switch (status.toLowerCase()) {
             case "pending" -> false;
             case "approved" -> true;
@@ -263,23 +225,16 @@ public class ShopServiceImpl implements ShopService {
     private ShopResponse convertToShopResponse(Shop shop) {
         ShopResponse response = modelMapper.map(shop, ShopResponse.class);
         
-        if (shop.getLogoCloudinaryPublicId() != null) {
-            response.setLogoUrl(cloudinaryService.getImageUrl(shop.getLogoCloudinaryPublicId()));
-        }
-        
-        if (shop.getCoverImageCloudinaryPublicId() != null) {
-            response.setCoverImageUrl(cloudinaryService.getImageUrl(shop.getCoverImageCloudinaryPublicId()));
-        }
-        
+        // Set address info with correct field names
         if (shop.getAddress() != null) {
-            response.setAddressLine1(shop.getAddress().getAddressLine1());
-            response.setAddressLine2(shop.getAddress().getAddressLine2());
+            response.setAddressLine1(shop.getAddress().getStreetAddress1());
+            response.setAddressLine2(shop.getAddress().getStreetAddress2());
             response.setCity(shop.getAddress().getCity());
-            response.setState(shop.getAddress().getState());
-            response.setCountry(shop.getAddress().getCountry());
             response.setPostalCode(shop.getAddress().getPostalCode());
+            response.setCountry(shop.getAddress().getCountryCode());
         }
         
+        // Set product count
         response.setTotalProducts(shopRepository.countProductsByShopId(shop.getId()));
         
         return response;
@@ -288,14 +243,7 @@ public class ShopServiceImpl implements ShopService {
     private ShopAdminResponse convertToShopAdminResponse(Shop shop) {
         ShopAdminResponse response = modelMapper.map(shop, ShopAdminResponse.class);
         
-        if (shop.getLogoCloudinaryPublicId() != null) {
-            response.setLogoUrl(cloudinaryService.getImageUrl(shop.getLogoCloudinaryPublicId()));
-        }
-        
-        if (shop.getCoverImageCloudinaryPublicId() != null) {
-            response.setCoverImageUrl(cloudinaryService.getImageUrl(shop.getCoverImageCloudinaryPublicId()));
-        }
-        
+        // Set seller info
         if (shop.getUser() != null) {
             response.setSellerId(shop.getUser().getId());
             response.setSellerEmail(shop.getUser().getEmail());
@@ -303,15 +251,16 @@ public class ShopServiceImpl implements ShopService {
             response.setSellerPhone(shop.getUser().getPhoneNumber());
         }
         
+        // Set address info with correct field names
         if (shop.getAddress() != null) {
-            response.setAddressLine1(shop.getAddress().getAddressLine1());
-            response.setAddressLine2(shop.getAddress().getAddressLine2());
+            response.setAddressLine1(shop.getAddress().getStreetAddress1());
+            response.setAddressLine2(shop.getAddress().getStreetAddress2());
             response.setCity(shop.getAddress().getCity());
-            response.setState(shop.getAddress().getState());
-            response.setCountry(shop.getAddress().getCountry());
             response.setPostalCode(shop.getAddress().getPostalCode());
+            response.setCountry(shop.getAddress().getCountryCode());
         }
         
+        // Set product statistics
         response.setTotalProducts(shopRepository.countProductsByShopId(shop.getId()));
         response.setApprovedProducts(shopRepository.countApprovedProductsByShopId(shop.getId()));
         response.setPendingProducts(shopRepository.countPendingProductsByShopId(shop.getId()));

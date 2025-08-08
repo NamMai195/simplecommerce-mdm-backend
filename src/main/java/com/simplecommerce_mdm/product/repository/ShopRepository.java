@@ -31,7 +31,7 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
            "AND (:isActive IS NULL OR s.isActive = :isActive) " +
            "AND (:sellerEmail IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :sellerEmail, '%'))) " +
            "AND (:city IS NULL OR LOWER(a.city) LIKE LOWER(CONCAT('%', :city, '%'))) " +
-           "AND (:country IS NULL OR LOWER(a.country) LIKE LOWER(CONCAT('%', :country, '%')))")
+           "AND (:country IS NULL OR LOWER(a.countryCode) LIKE LOWER(CONCAT('%', :country, '%')))")
     Page<Shop> findShopsForAdmin(@Param("searchTerm") String searchTerm,
                                  @Param("isActive") Boolean isActive,
                                  @Param("sellerEmail") String sellerEmail,
