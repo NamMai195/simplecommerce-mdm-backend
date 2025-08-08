@@ -48,6 +48,8 @@ public class SecurityConfig {
                                 "/favicon.ico"
                         ).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN") // API Admin yêu cầu quyền ADMIN
+                        .requestMatchers("/api/v1/seller/**").hasRole("SELLER") // API Seller yêu cầu quyền SELLER
+                        .requestMatchers("/api/v1/user/**").hasAnyRole("USER", "SELLER", "ADMIN") // API User cho tất cả user
                         // Quyền truy cập cho user profile
                         .requestMatchers("/api/v1/users/profile").hasAnyRole("USER", "SELLER", "ADMIN")
                         .anyRequest().authenticated() // Tất cả các request khác đều cần xác thực

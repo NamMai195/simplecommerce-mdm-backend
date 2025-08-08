@@ -29,5 +29,5 @@ public interface ShopService {
     // Seller shop management (after getting SELLER role)
     ShopResponse getSellerShop(CustomUserDetails sellerDetails);
     
-    ShopResponse updateSellerShop(ShopCreateRequest updateRequest, CustomUserDetails sellerDetails);
+    Object getSellerShopStats(CustomUserDetails sellerDetails);
 } 
