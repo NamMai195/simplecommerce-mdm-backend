@@ -59,4 +59,28 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
                                        @Param("sellerEmail") String sellerEmail,
                                        @Param("searchTerm") String searchTerm,
                                        Pageable pageable);
+
+    // Buyer/Public methods - Featured products
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.isFeatured = true " +
+           "AND p.status = 'APPROVED'")
+    Page<Product> findFeaturedProducts(Pageable pageable);
+    
+    // Buyer/Public methods - All approved products with search
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.status = 'APPROVED' " +
+           "AND (:searchTerm IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
+           "     OR LOWER(p.sku) LIKE LOWER(CONCAT('%', :searchTerm, '%')))")
+    Page<Product> findApprovedProducts(@Param("searchTerm") String searchTerm, Pageable pageable);
+    
+    // Buyer/Public methods - Find approved product by ID
+    @Query("SELECT p FROM Product p " +
+           "LEFT JOIN FETCH p.shop s " +
+           "LEFT JOIN FETCH p.category c " +
+           "WHERE p.id = :id AND p.status = 'APPROVED'")
+    Optional<Product> findApprovedProductById(@Param("id") Long id);
 } 

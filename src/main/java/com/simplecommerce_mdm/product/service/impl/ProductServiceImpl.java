@@ -10,6 +10,8 @@ import com.simplecommerce_mdm.exception.ResourceNotFoundException;
 import com.simplecommerce_mdm.product.dto.ProductAdminResponse;
 import com.simplecommerce_mdm.product.dto.ProductAdminSearchRequest;
 import com.simplecommerce_mdm.product.dto.ProductApprovalRequest;
+import com.simplecommerce_mdm.product.dto.ProductBuyerListResponse;
+import com.simplecommerce_mdm.product.dto.ProductBuyerResponse;
 import com.simplecommerce_mdm.product.dto.ProductCreateRequest;
 import com.simplecommerce_mdm.product.dto.ProductListResponse;
 import com.simplecommerce_mdm.product.dto.ProductResponse;
@@ -527,6 +529,133 @@ public class ProductServiceImpl implements ProductService {
         List<ProductImage> productImages = productImageRepository.findByTargetIdAndTargetType(
                 product.getId(), ImageTargetType.PRODUCT);
         List<String> imageUrls = productImages.stream()
+                .map(img -> cloudinaryService.getImageUrl(img.getCloudinaryPublicId()))
+                .collect(Collectors.toList());
+        response.setImageUrls(imageUrls);
+        
+        return response;
+    }
+
+    // ===== BUYER/PUBLIC METHODS =====
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductBuyerListResponse getFeaturedProducts(Integer page, Integer size, String sortBy, String sortDirection) {
+        log.info("Getting featured products: page={}, size={}, sortBy={}, sortDirection={}", 
+                 page, size, sortBy, sortDirection);
+
+        // Create pageable
+        Sort sort = sortDirection.equalsIgnoreCase("desc") 
+            ? Sort.by(sortBy).descending() 
+            : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // Get featured products
+        Page<Product> productPage = productRepository.findFeaturedProducts(pageable);
+
+        // Convert to buyer response
+        List<ProductBuyerResponse> buyerProducts = productPage.getContent().stream()
+                .map(this::convertToProductBuyerResponse)
+                .collect(Collectors.toList());
+
+        // Build response
+        ProductBuyerListResponse response = new ProductBuyerListResponse();
+        response.setProducts(buyerProducts);
+        response.setCurrentPage(productPage.getNumber());
+        response.setTotalPages(productPage.getTotalPages());
+        response.setTotalElements(productPage.getTotalElements());
+        response.setPageSize(productPage.getSize());
+        response.setHasNext(productPage.hasNext());
+        response.setHasPrevious(productPage.hasPrevious());
+
+        log.info("Found {} featured products", buyerProducts.size());
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductBuyerListResponse getProducts(String searchTerm, Integer page, Integer size, String sortBy, String sortDirection) {
+        log.info("Getting products: searchTerm='{}', page={}, size={}, sortBy={}, sortDirection={}", 
+                 searchTerm, page, size, sortBy, sortDirection);
+
+        // Create pageable
+        Sort sort = sortDirection.equalsIgnoreCase("desc") 
+            ? Sort.by(sortBy).descending() 
+            : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        // Get approved products with search
+        Page<Product> productPage = productRepository.findApprovedProducts(searchTerm, pageable);
+
+        // Convert to buyer response
+        List<ProductBuyerResponse> buyerProducts = productPage.getContent().stream()
+                .map(this::convertToProductBuyerResponse)
+                .collect(Collectors.toList());
+
+        // Build response
+        ProductBuyerListResponse response = new ProductBuyerListResponse();
+        response.setProducts(buyerProducts);
+        response.setCurrentPage(productPage.getNumber());
+        response.setTotalPages(productPage.getTotalPages());
+        response.setTotalElements(productPage.getTotalElements());
+        response.setPageSize(productPage.getSize());
+        response.setHasNext(productPage.hasNext());
+        response.setHasPrevious(productPage.hasPrevious());
+
+        log.info("Found {} products", buyerProducts.size());
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductBuyerResponse getProductById(Long productId) {
+        log.info("Getting approved product by ID: {}", productId);
+
+        Product product = productRepository.findApprovedProductById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found or not approved: " + productId));
+
+        return convertToProductBuyerResponse(product);
+    }
+
+    // Helper method to convert Product to ProductBuyerResponse
+    private ProductBuyerResponse convertToProductBuyerResponse(Product product) {
+        ProductBuyerResponse response = modelMapper.map(product, ProductBuyerResponse.class);
+        
+        // Set category info
+        if (product.getCategory() != null) {
+            response.setCategoryId(product.getCategory().getId());
+            response.setCategoryName(product.getCategory().getName());
+        }
+        
+        // Set shop info
+        if (product.getShop() != null) {
+            response.setShopId(product.getShop().getId());
+            response.setShopName(product.getShop().getName());
+            response.setShopSlug(product.getShop().getSlug());
+            response.setShopRating(product.getShop().getRating());
+        }
+
+        // Map variants to buyer response
+        List<ProductBuyerResponse.ProductVariantBuyerResponse> variantResponses = product.getVariants().stream()
+                .filter(variant -> variant.getIsActive()) // Only show active variants
+                .map(variant -> {
+                    ProductBuyerResponse.ProductVariantBuyerResponse variantResponse = 
+                        new ProductBuyerResponse.ProductVariantBuyerResponse();
+                    variantResponse.setSku(variant.getSku());
+                    variantResponse.setFinalPrice(variant.getFinalPrice());
+                    variantResponse.setCompareAtPrice(variant.getCompareAtPrice());
+                    variantResponse.setStockQuantity(variant.getStockQuantity());
+                    variantResponse.setOptions(variant.getOptions());
+                    variantResponse.setIsActive(variant.getIsActive());
+                    return variantResponse;
+                })
+                .collect(Collectors.toList());
+        response.setVariants(variantResponses);
+
+        // Get and set image URLs
+        List<ProductImage> images = productImageRepository.findByTargetIdAndTargetType(
+                product.getId(), ImageTargetType.PRODUCT);
+        List<String> imageUrls = images.stream()
                 .map(img -> cloudinaryService.getImageUrl(img.getCloudinaryPublicId()))
                 .collect(Collectors.toList());
         response.setImageUrls(imageUrls);
