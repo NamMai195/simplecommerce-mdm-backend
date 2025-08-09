@@ -15,6 +15,8 @@ import com.simplecommerce_mdm.product.repository.ShopRepository;
 import com.simplecommerce_mdm.user.model.User;
 import com.simplecommerce_mdm.user.repository.UserRepository;
 import com.simplecommerce_mdm.cloudinary.service.CloudinaryService;
+import com.simplecommerce_mdm.email.service.EmailService;
+import com.simplecommerce_mdm.email.events.OrderEmailEvents;
 import com.simplecommerce_mdm.exception.ResourceNotFoundException;
 import com.simplecommerce_mdm.exception.InvalidDataException;
 import com.simplecommerce_mdm.common.enums.*;
@@ -22,6 +24,7 @@ import com.simplecommerce_mdm.common.enums.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -51,6 +54,8 @@ public class OrderServiceImpl implements OrderService {
     private final ShopRepository shopRepository;
     private final CloudinaryService cloudinaryService;
     private final ModelMapper modelMapper;
+    private final EmailService emailService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public MasterOrderResponse createOrderFromCart(Long userId, CheckoutRequest request) {
@@ -120,6 +125,9 @@ public class OrderServiceImpl implements OrderService {
         
         // 12. Clear user's cart
         clearUserCart(userId);
+        
+        // 13. Publish email events (async AFTER_COMMIT)
+        publishOrderEmails(masterOrder);
         
         log.info("Order created successfully. Order group: {}", orderGroupNumber);
         
@@ -226,10 +234,17 @@ public class OrderServiceImpl implements OrderService {
         if (request.getInternalNotes() != null) {
             order.setInternalNotes(request.getInternalNotes());
         }
+        
+        // Note: Current Order entity doesn't have specific timestamp fields for status changes
+        // You may want to add these fields later: processingAt, shippedAt, deliveredAt, cancelledAt
+        
         order = orderRepository.save(order);
         
         // Update master order status if needed
         updateMasterOrderStatus(order.getMasterOrder());
+        
+        // Publish status update email event
+        publishOrderStatusUpdateEmail(order, oldStatus.toString(), newStatus.toString());
         
         log.info("Order {} status updated from {} to {}", orderId, oldStatus, newStatus);
         
@@ -543,5 +558,36 @@ public class OrderServiceImpl implements OrderService {
                 .orderedAt(order.getOrderedAt())
                 .createdAt(order.getCreatedAt())
                 .build();
+    }
+
+    // === EMAIL EVENT PUBLISHERS ===
+
+    /**
+     * Sends order confirmation email to buyer and new order alerts to sellers
+     */
+    private void publishOrderEmails(MasterOrder masterOrder) {
+        try {
+            // Buyer confirmation
+            eventPublisher.publishEvent(new OrderEmailEvents.OrderConfirmationEvent(masterOrder));
+            // Seller alerts
+            for (Order order : masterOrder.getOrders()) {
+                eventPublisher.publishEvent(new OrderEmailEvents.NewOrderAlertEvent(order));
+            }
+        } catch (Exception e) {
+            log.error("Failed to publish order email events for group {}: {}", 
+                masterOrder.getOrderGroupNumber(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Sends order status update email to buyer
+     */
+    private void publishOrderStatusUpdateEmail(Order order, String oldStatus, String newStatus) {
+        try {
+            eventPublisher.publishEvent(new OrderEmailEvents.OrderStatusUpdateEvent(order, oldStatus, newStatus));
+        } catch (Exception e) {
+            log.error("Failed to publish status update email event for order {}: {}", 
+                order.getOrderNumber(), e.getMessage(), e);
+        }
     }
 } 
