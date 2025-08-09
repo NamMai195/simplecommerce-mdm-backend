@@ -3,6 +3,7 @@ package com.simplecommerce_mdm.user.controller;
 import com.simplecommerce_mdm.user.dto.UserResponse;
 import com.simplecommerce_mdm.user.dto.UserUpdateRequest;
 import com.simplecommerce_mdm.user.service.UserService;
+import com.simplecommerce_mdm.common.dto.ApiResponse; // Import ApiResponse
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -26,33 +27,39 @@ public class UserController {
 
     private final UserService userService;
 
-    // Helper method to get authenticated user ID
     private Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof com.simplecommerce_mdm.config.CustomUserDetails customUserDetails) {
             return customUserDetails.getUser().getId();
         }
-        // Ném ngoại lệ nếu không tìm thấy người dùng đã xác thực
         throw new IllegalStateException("User not authenticated or user ID not found in security context.");
     }
 
     @Operation(summary = "Get current user profile", description = "Retrieve personal information of the authenticated user.")
     @GetMapping("/profile")
-    public ResponseEntity<UserResponse> getProfile() {
+    public ResponseEntity<ApiResponse<UserResponse>> getProfile() {
         Long userId = getCurrentUserId();
         log.info("Request to get profile for current user ID: {}", userId);
         UserResponse userProfile = userService.getLoggedInUserProfile(userId);
-        return ResponseEntity.ok(userProfile);
+        ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
+                .message("User profile retrieved successfully")
+                .data(userProfile)
+                .build();
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Update current user profile", description = "Update personal information of the authenticated user, including avatar upload.")
     @PutMapping(value = "/profile", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE})
-    public ResponseEntity<UserResponse> updateProfile(
+    public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
             @RequestPart("profile") @Valid UserUpdateRequest updateRequest,
             @RequestPart(value = "avatar", required = false) MultipartFile avatarFile) {
         Long userId = getCurrentUserId();
         log.info("Request to update profile for current user ID: {}", userId);
         UserResponse updatedProfile = userService.updateProfile(userId, updateRequest, avatarFile);
-        return ResponseEntity.ok(updatedProfile);
+        ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
+                .message("User profile updated successfully")
+                .data(updatedProfile)
+                .build();
+        return ResponseEntity.ok(response);
     }
 }

@@ -11,7 +11,7 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserResponse {
+public class UserAdminResponse {
     private Long id;
     private UUID uuid;
     private String firstName;
@@ -26,8 +26,10 @@ public class UserResponse {
     private LocalDateTime lastLoginAt;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDateTime deletedAt;
     private String metadata;
     private Set<RoleResponse> roles;
+    private UserStatistics statistics;
 
     @Getter
     @Setter
@@ -38,5 +40,17 @@ public class UserResponse {
         private Integer roleId;
         private String roleName;
         private String description;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UserStatistics {
+        private Long totalOrders;
+        private Long totalShops;
+        private Long totalProducts;
+        private Boolean hasActiveCart;
     }
 }
