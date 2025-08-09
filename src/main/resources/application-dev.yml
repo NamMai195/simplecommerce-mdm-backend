@@ -97,7 +97,7 @@ jwt:
 brevo:
   api-key: ${BREVO_API_KEY}
   sender:
-    email: no-reply@simplecommerce-dev.com
+    email: mnam3239@gmail.com
     name: SimpleCommerce MDM (Dev)
 
 # Cloudinary configuration - SECURE: Using environment variables only
