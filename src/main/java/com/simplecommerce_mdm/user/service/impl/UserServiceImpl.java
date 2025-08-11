@@ -287,6 +287,31 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    @Transactional
+    public void changePasswordByUser(Long userId, ChangePasswordByUserRequest request) {
+        log.info("User {} requests password change", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + userId));
+
+        // Check old password
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPasswordHash())) {
+            throw new InvalidDataException("Current password is incorrect");
+        }
+        // Check new password != old password
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
+            throw new InvalidDataException("New password must be different from the current password");
+        }
+        // Check confirm password
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new InvalidDataException("Confirm password does not match new password");
+        }
+        // Update password
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+        log.info("User {} changed password successfully", userId);
+    }
+
+    @Override
     public Map<String, Object> getUserStatistics() {
         log.info("Fetching general user statistics");
         Map<String, Object> stats = new HashMap<>();

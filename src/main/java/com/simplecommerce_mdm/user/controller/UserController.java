@@ -4,6 +4,7 @@ import com.simplecommerce_mdm.user.dto.UserResponse;
 import com.simplecommerce_mdm.user.dto.UserUpdateRequest;
 import com.simplecommerce_mdm.user.service.UserService;
 import com.simplecommerce_mdm.common.dto.ApiResponse; // Import ApiResponse
+import com.simplecommerce_mdm.user.dto.ChangePasswordByUserRequest; // Import ChangePasswordByUserRequest
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -29,7 +30,8 @@ public class UserController {
 
     private Long getCurrentUserId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getPrincipal() instanceof com.simplecommerce_mdm.config.CustomUserDetails customUserDetails) {
+        if (authentication != null && authentication
+                .getPrincipal() instanceof com.simplecommerce_mdm.config.CustomUserDetails customUserDetails) {
             return customUserDetails.getUser().getId();
         }
         throw new IllegalStateException("User not authenticated or user ID not found in security context.");
@@ -49,7 +51,8 @@ public class UserController {
     }
 
     @Operation(summary = "Update current user profile", description = "Update personal information of the authenticated user, including avatar upload.")
-    @PutMapping(value = "/profile", consumes = {MediaType.APPLICATION_JSON_VALUE, MediaType.MULTIPART_FORM_DATA_VALUE})
+    @PutMapping(value = "/profile", consumes = { MediaType.APPLICATION_JSON_VALUE,
+            MediaType.MULTIPART_FORM_DATA_VALUE })
     public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
             @RequestPart("profile") @Valid UserUpdateRequest updateRequest,
             @RequestPart(value = "avatar", required = false) MultipartFile avatarFile) {
@@ -59,6 +62,19 @@ public class UserController {
         ApiResponse<UserResponse> response = ApiResponse.<UserResponse>builder()
                 .message("User profile updated successfully")
                 .data(updatedProfile)
+                .build();
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Change password (user-initiated)", description = "Change password for authenticated user")
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePasswordByUser(
+            @Valid @RequestBody ChangePasswordByUserRequest request) {
+        Long userId = getCurrentUserId();
+        log.info("User {} requests password change", userId);
+        userService.changePasswordByUser(userId, request);
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message("Password changed successfully")
                 .build();
         return ResponseEntity.ok(response);
     }

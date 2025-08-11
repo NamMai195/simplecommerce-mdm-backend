@@ -38,6 +38,8 @@ public interface UserService {
 
     void resetUserPassword(Long userId, String newPassword);
 
+    void changePasswordByUser(Long userId, ChangePasswordByUserRequest request);
+
     // Statistics methods
     Map<String, Object> getUserStatistics();
 

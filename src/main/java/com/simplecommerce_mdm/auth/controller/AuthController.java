@@ -1,9 +1,6 @@
 package com.simplecommerce_mdm.auth.controller;
 
-import com.simplecommerce_mdm.auth.dto.GoogleAuthRequest;
-import com.simplecommerce_mdm.auth.dto.LoginRequest;
-import com.simplecommerce_mdm.auth.dto.RegisterRequest;
-import com.simplecommerce_mdm.auth.dto.TokenResponse;
+import com.simplecommerce_mdm.auth.dto.*;
 import com.simplecommerce_mdm.auth.service.AuthService;
 import com.simplecommerce_mdm.common.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -66,6 +63,30 @@ public class AuthController {
         ApiResponse<TokenResponse> response = ApiResponse.<TokenResponse>builder()
                 .message("Google login successful")
                 .data(tokenResponse)
+                .build();
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Forgot Password", description = "Request password reset OTP via email")
+    @PostMapping("/forgotpassword")
+    public ResponseEntity<ApiResponse<ForgotPasswordResponse>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+        log.info("Forgot password request for email: {}", request.getEmail());
+        ForgotPasswordResponse response = authService.forgotPassword(request);
+        ApiResponse<ForgotPasswordResponse> apiResponse = ApiResponse.<ForgotPasswordResponse>builder()
+                .message("Password reset OTP sent successfully")
+                .data(response)
+                .build();
+        return ResponseEntity.ok(apiResponse);
+    }
+
+    @Operation(summary = "Change Password", description = "Change password using OTP verification")
+    @PostMapping("/changepassword")
+    public ResponseEntity<ApiResponse<Void>> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
+        log.info("Change password request for email: {}", request.getEmail());
+        authService.changePassword(request);
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message("Password changed successfully")
                 .build();
         return ResponseEntity.ok(response);
     }
