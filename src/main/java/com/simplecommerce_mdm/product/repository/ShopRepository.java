@@ -7,9 +7,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
+import java.util.List;
 
 @Repository
 public interface ShopRepository extends JpaRepository<Shop, Long> {
@@ -22,43 +24,30 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     // Admin search methods
     Page<Shop> findByIsActive(Boolean isActive, Pageable pageable);
     
+    // Use Spring Data JPA method instead of custom query to avoid bytea issues
     Page<Shop> findByNameContainingIgnoreCase(String name, Pageable pageable);
     
-    // Complex admin search with joins
-    @Query("SELECT s FROM Shop s " +
-           "LEFT JOIN FETCH s.user u " +
-           "LEFT JOIN FETCH s.address a " +
-           "WHERE (:searchTerm IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :searchTerm, '%')) " +
-           "       OR LOWER(u.email) LIKE LOWER(CONCAT('%', :searchTerm, '%'))) " +
-           "AND (:isActive IS NULL OR s.isActive = :isActive) " +
-           "AND (:sellerEmail IS NULL OR LOWER(u.email) LIKE LOWER(CONCAT('%', :sellerEmail, '%'))) " +
-           "AND (:city IS NULL OR LOWER(a.city) LIKE LOWER(CONCAT('%', :city, '%'))) " +
-           "AND (:country IS NULL OR LOWER(a.countryCode) LIKE LOWER(CONCAT('%', :country, '%')))")
-    Page<Shop> findShopsForAdmin(@Param("searchTerm") String searchTerm,
-                                 @Param("isActive") Boolean isActive,
-                                 @Param("sellerEmail") String sellerEmail,
-                                 @Param("city") String city,
-                                 @Param("country") String country,
-                                 Pageable pageable);
+    // Complex admin search with native SQL to avoid type mapping issues
+    @Query(value = "SELECT s.* FROM shops s " +
+           "WHERE s.deleted_at IS NULL " +
+           "AND (:searchTerm IS NULL OR s.name ILIKE '%' || :searchTerm || '%') " +
+           "AND (:isActive IS NULL OR s.is_active = :isActive)",
+           nativeQuery = true)
+    List<Shop> findShopsForAdminNative(@Param("searchTerm") String searchTerm,
+                                       @Param("isActive") Boolean isActive);
     
     // Pending shops (for approval)
     @Query("SELECT s FROM Shop s " +
-           "LEFT JOIN FETCH s.user u " +
-           "LEFT JOIN FETCH s.address a " +
            "WHERE s.isActive = false AND s.approvedAt IS NULL")
     Page<Shop> findPendingShops(Pageable pageable);
     
     // Approved shops
     @Query("SELECT s FROM Shop s " +
-           "LEFT JOIN FETCH s.user u " +
-           "LEFT JOIN FETCH s.address a " +
            "WHERE s.isActive = true AND s.approvedAt IS NOT NULL")
     Page<Shop> findApprovedShops(Pageable pageable);
     
     // Rejected shops
     @Query("SELECT s FROM Shop s " +
-           "LEFT JOIN FETCH s.user u " +
-           "LEFT JOIN FETCH s.address a " +
            "WHERE s.isActive = false AND s.rejectionReason IS NOT NULL")
     Page<Shop> findRejectedShops(Pageable pageable);
     

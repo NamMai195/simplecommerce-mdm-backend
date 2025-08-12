@@ -19,25 +19,25 @@ public class Address extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "street_address1", nullable = false, length = 255)
+    @Column(name = "street_address1", nullable = false, length = 255, columnDefinition = "VARCHAR(255)")
     private String streetAddress1;
 
-    @Column(name = "street_address2", length = 255)
+    @Column(name = "street_address2", length = 255, columnDefinition = "VARCHAR(255)")
     private String streetAddress2;
 
-    @Column(name = "ward", length = 100)
+    @Column(name = "ward", length = 100, columnDefinition = "VARCHAR(100)")
     private String ward;
 
-    @Column(name = "district", nullable = false, length = 100)
+    @Column(name = "district", nullable = false, length = 100, columnDefinition = "VARCHAR(100)")
     private String district;
 
-    @Column(name = "city", nullable = false, length = 100)
+    @Column(name = "city", nullable = false, length = 100, columnDefinition = "VARCHAR(100)")
     private String city;
 
-    @Column(name = "postal_code", length = 20)
+    @Column(name = "postal_code", length = 20, columnDefinition = "VARCHAR(20)")
     private String postalCode;
 
-    @Column(name = "country_code", nullable = false, length = 2)
+    @Column(name = "country_code", nullable = false, length = 2, columnDefinition = "VARCHAR(2)")
     @Builder.Default
     private String countryCode = "VN";
 

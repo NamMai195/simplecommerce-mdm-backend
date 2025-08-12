@@ -45,10 +45,10 @@ public class User extends BaseEntity {
         return firstName != null ? firstName : (lastName != null ? lastName : "");
     }
 
-    @Column(name = "email", nullable = false, unique = true, length = 255)
+    @Column(name = "email", nullable = false, unique = true, length = 255, columnDefinition = "VARCHAR(255)")
     private String email;
 
-    @Column(name = "phone_number", unique = true, length = 20)
+    @Column(name = "phone_number", unique = true, length = 20, columnDefinition = "VARCHAR(20)")
     private String phoneNumber;
 
     @Column(name = "password_hash", nullable = false, columnDefinition = "TEXT")

@@ -7,11 +7,13 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.Where;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.HashSet;
 import java.util.Set;
+import org.hibernate.annotations.JdbcTypeCode;
 
 @Getter
 @Setter
@@ -22,6 +24,13 @@ import java.util.Set;
 @Table(name = "shops")
 @SQLDelete(sql = "UPDATE shops SET deleted_at = NOW() WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")
+@NamedEntityGraph(
+    name = "Shop.withUserAndAddress",
+    attributeNodes = {
+        @NamedAttributeNode("user"),
+        @NamedAttributeNode("address")
+    }
+)
 public class Shop extends BaseEntity {
 
     @Id
@@ -32,25 +41,32 @@ public class Shop extends BaseEntity {
     @JoinColumn(name = "user_id", nullable = false, unique = true)
     private User user;
 
-    @Column(name = "name", nullable = false, length = 255)
+    @Column(name = "name", nullable = false, length = 255, columnDefinition = "VARCHAR(255)")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private String name;
 
-    @Column(name = "slug", nullable = false, unique = true, length = 255)
+    @Column(name = "slug", nullable = false, unique = true, length = 255, columnDefinition = "VARCHAR(255)")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private String slug;
 
     @Column(name = "description", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.LONGVARCHAR)
     private String description;
 
-    @Column(name = "logo_cloudinary_public_id", length = 255)
+    @Column(name = "logo_cloudinary_public_id", length = 255, columnDefinition = "VARCHAR(255)")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private String logoCloudinaryPublicId;
 
-    @Column(name = "cover_image_cloudinary_public_id", length = 255)
+    @Column(name = "cover_image_cloudinary_public_id", length = 255, columnDefinition = "VARCHAR(255)")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private String coverImageCloudinaryPublicId;
 
-    @Column(name = "contact_email", length = 255)
+    @Column(name = "contact_email", length = 255, columnDefinition = "VARCHAR(255)")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private String contactEmail;
 
-    @Column(name = "contact_phone", length = 20)
+    @Column(name = "contact_phone", length = 20, columnDefinition = "VARCHAR(20)")
+    @JdbcTypeCode(SqlTypes.VARCHAR)
     private String contactPhone;
 
     @ManyToOne(fetch = FetchType.LAZY)

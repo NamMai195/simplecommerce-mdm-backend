@@ -17,9 +17,7 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
      * Find variant by ID and ensure it's active
      */
     @Query("SELECT pv FROM ProductVariant pv " +
-           "LEFT JOIN FETCH pv.product p " +
-           "LEFT JOIN FETCH p.shop s " +
-           "WHERE pv.id = :variantId AND pv.isActive = true AND p.status = 'APPROVED'")
+           "WHERE pv.id = :variantId AND pv.isActive = true AND pv.product.status = 'APPROVED'")
     Optional<ProductVariant> findActiveVariantById(@Param("variantId") Long variantId);
     
     /**
