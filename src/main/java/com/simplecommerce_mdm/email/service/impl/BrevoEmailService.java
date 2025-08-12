@@ -97,10 +97,9 @@ public class BrevoEmailService implements EmailService {
         try {
             Map<String, Object> templateParams = buildOrderConfirmationParams(masterOrder);
             sendEmailWithTemplate(
-                masterOrder.getUser().getEmail(),
-                ORDER_CONFIRMATION_TEMPLATE_ID,
-                templateParams
-            );
+                    masterOrder.getUser().getEmail(),
+                    ORDER_CONFIRMATION_TEMPLATE_ID,
+                    templateParams);
             log.info("Order confirmation email sent for order: {}", masterOrder.getOrderGroupNumber());
         } catch (Exception e) {
             log.error("Failed to send order confirmation email for order: {}", masterOrder.getOrderGroupNumber(), e);
@@ -112,12 +111,11 @@ public class BrevoEmailService implements EmailService {
         try {
             Map<String, Object> templateParams = buildNewOrderAlertParams(order);
             sendEmailWithTemplate(
-                order.getShop().getUser().getEmail(),
-                NEW_ORDER_ALERT_TEMPLATE_ID,
-                templateParams
-            );
-            log.info("New order alert email sent for order: {} to seller: {}", 
-                order.getOrderNumber(), order.getShop().getUser().getEmail());
+                    order.getShop().getUser().getEmail(),
+                    NEW_ORDER_ALERT_TEMPLATE_ID,
+                    templateParams);
+            log.info("New order alert email sent for order: {} to seller: {}",
+                    order.getOrderNumber(), order.getShop().getUser().getEmail());
         } catch (Exception e) {
             log.error("Failed to send new order alert email for order: {}", order.getOrderNumber(), e);
         }
@@ -128,12 +126,11 @@ public class BrevoEmailService implements EmailService {
         try {
             Map<String, Object> templateParams = buildOrderStatusUpdateParams(order, oldStatus, newStatus);
             sendEmailWithTemplate(
-                order.getMasterOrder().getUser().getEmail(),
-                ORDER_STATUS_UPDATE_TEMPLATE_ID,
-                templateParams
-            );
-            log.info("Order status update email sent for order: {} from {} to {}", 
-                order.getOrderNumber(), oldStatus, newStatus);
+                    order.getMasterOrder().getUser().getEmail(),
+                    ORDER_STATUS_UPDATE_TEMPLATE_ID,
+                    templateParams);
+            log.info("Order status update email sent for order: {} from {} to {}",
+                    order.getOrderNumber(), oldStatus, newStatus);
         } catch (Exception e) {
             log.error("Failed to send order status update email for order: {}", order.getOrderNumber(), e);
         }
@@ -169,7 +166,7 @@ public class BrevoEmailService implements EmailService {
 
     private Map<String, Object> buildOrderConfirmationParams(MasterOrder masterOrder) {
         Map<String, Object> params = new HashMap<>();
-        
+
         // Basic order info
         params.put("customerName", masterOrder.getUser().getFullName());
         params.put("orderNumber", masterOrder.getOrderGroupNumber());
@@ -177,30 +174,39 @@ public class BrevoEmailService implements EmailService {
         params.put("totalAmount", formatCurrency(masterOrder.getTotalAmountPaid()));
         params.put("paymentMethod", "Thanh toán khi nhận hàng (COD)");
         params.put("estimatedDelivery", calculateEstimatedDelivery());
-        
+
         // Shipping address - parse from snapshot since there's no direct relation
-        params.put("shippingStreet", masterOrder.getShippingAddressSnapshot() != null ? 
-            parseAddressField(masterOrder.getShippingAddressSnapshot(), "street") : "");
-        params.put("shippingWard", masterOrder.getShippingAddressSnapshot() != null ? 
-            parseAddressField(masterOrder.getShippingAddressSnapshot(), "ward") : "");
-        params.put("shippingDistrict", masterOrder.getShippingAddressSnapshot() != null ? 
-            parseAddressField(masterOrder.getShippingAddressSnapshot(), "district") : "");
-        params.put("shippingCity", masterOrder.getShippingAddressSnapshot() != null ? 
-            parseAddressField(masterOrder.getShippingAddressSnapshot(), "city") : "");
+        params.put("shippingStreet",
+                masterOrder.getShippingAddressSnapshot() != null
+                        ? parseAddressField(masterOrder.getShippingAddressSnapshot(), "street")
+                        : "");
+        params.put("shippingWard",
+                masterOrder.getShippingAddressSnapshot() != null
+                        ? parseAddressField(masterOrder.getShippingAddressSnapshot(), "ward")
+                        : "");
+        params.put("shippingDistrict",
+                masterOrder.getShippingAddressSnapshot() != null
+                        ? parseAddressField(masterOrder.getShippingAddressSnapshot(), "district")
+                        : "");
+        params.put("shippingCity",
+                masterOrder.getShippingAddressSnapshot() != null
+                        ? parseAddressField(masterOrder.getShippingAddressSnapshot(), "city")
+                        : "");
         params.put("shippingPhone", masterOrder.getCustomerPhone() != null ? masterOrder.getCustomerPhone() : "");
-        
+
         // Order items
         List<Map<String, Object>> orderItems = new ArrayList<>();
         for (Order order : masterOrder.getOrders()) {
             for (OrderItem item : order.getOrderItems()) {
                 Map<String, Object> itemData = new HashMap<>();
                 // Use snapshot data for safety, fallback to variant if available
-                itemData.put("productName", item.getProductNameSnapshot() != null ? 
-                    item.getProductNameSnapshot() : 
-                    (item.getVariant() != null ? item.getVariant().getProduct().getName() : "Unknown Product"));
-                itemData.put("variantOptions", item.getVariantOptionsSnapshot() != null ? 
-                    item.getVariantOptionsSnapshot() : 
-                    (item.getVariant() != null && item.getVariant().getOptions() != null ? item.getVariant().getOptions() : ""));
+                itemData.put("productName", item.getProductNameSnapshot() != null ? item.getProductNameSnapshot()
+                        : (item.getVariant() != null ? item.getVariant().getProduct().getName() : "Unknown Product"));
+                itemData.put("variantOptions",
+                        item.getVariantOptionsSnapshot() != null ? item.getVariantOptionsSnapshot()
+                                : (item.getVariant() != null && item.getVariant().getOptions() != null
+                                        ? item.getVariant().getOptions()
+                                        : ""));
                 itemData.put("shopName", order.getShop().getName());
                 itemData.put("quantity", item.getQuantity().toString());
                 itemData.put("unitPrice", formatCurrency(item.getUnitPrice()));
@@ -209,74 +215,85 @@ public class BrevoEmailService implements EmailService {
             }
         }
         params.put("orderItems", orderItems);
-        
+
         // URLs and footer links
         addCommonEmailData(params);
         params.put("trackingUrl", buildTrackingUrl(masterOrder.getOrderGroupNumber()));
-        
+
         return params;
     }
 
     private Map<String, Object> buildNewOrderAlertParams(Order order) {
         Map<String, Object> params = new HashMap<>();
-        
+
         // Calculate order value
-        BigDecimal orderValue = order.getSubtotalAmount().add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
-        
+        BigDecimal orderValue = order.getSubtotalAmount()
+                .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
+
         // Seller and order info
         params.put("sellerName", order.getShop().getUser().getFullName());
         params.put("orderNumber", order.getOrderNumber());
         params.put("orderValue", formatCurrency(orderValue));
         params.put("orderDate", formatDateTime(order.getCreatedAt()));
         params.put("confirmationDeadline", calculateConfirmationDeadline(order.getCreatedAt()));
-        
+
         // Customer info - get from master order
         MasterOrder masterOrder = order.getMasterOrder();
         params.put("customerName", masterOrder.getUser().getFullName());
         params.put("customerEmail", masterOrder.getUser().getEmail());
         params.put("customerPhone", masterOrder.getCustomerPhone() != null ? masterOrder.getCustomerPhone() : "");
-        
+
         // Shipping address - parse from master order snapshot
-        params.put("shippingStreet", masterOrder.getShippingAddressSnapshot() != null ? 
-            parseAddressField(masterOrder.getShippingAddressSnapshot(), "street") : "");
-        params.put("shippingWard", masterOrder.getShippingAddressSnapshot() != null ? 
-            parseAddressField(masterOrder.getShippingAddressSnapshot(), "ward") : "");
-        params.put("shippingDistrict", masterOrder.getShippingAddressSnapshot() != null ? 
-            parseAddressField(masterOrder.getShippingAddressSnapshot(), "district") : "");
-        params.put("shippingCity", masterOrder.getShippingAddressSnapshot() != null ? 
-            parseAddressField(masterOrder.getShippingAddressSnapshot(), "city") : "");
+        params.put("shippingStreet",
+                masterOrder.getShippingAddressSnapshot() != null
+                        ? parseAddressField(masterOrder.getShippingAddressSnapshot(), "street")
+                        : "");
+        params.put("shippingWard",
+                masterOrder.getShippingAddressSnapshot() != null
+                        ? parseAddressField(masterOrder.getShippingAddressSnapshot(), "ward")
+                        : "");
+        params.put("shippingDistrict",
+                masterOrder.getShippingAddressSnapshot() != null
+                        ? parseAddressField(masterOrder.getShippingAddressSnapshot(), "district")
+                        : "");
+        params.put("shippingCity",
+                masterOrder.getShippingAddressSnapshot() != null
+                        ? parseAddressField(masterOrder.getShippingAddressSnapshot(), "city")
+                        : "");
         params.put("shippingPhone", masterOrder.getCustomerPhone() != null ? masterOrder.getCustomerPhone() : "");
-        
+
         // Order items
         List<Map<String, Object>> orderItems = new ArrayList<>();
         for (OrderItem item : order.getOrderItems()) {
             Map<String, Object> itemData = new HashMap<>();
             itemData.put("productName", item.getVariant().getProduct().getName());
             itemData.put("sku", item.getVariant().getSku() != null ? item.getVariant().getSku() : "");
-            itemData.put("variantOptions", item.getVariant().getOptions() != null ? item.getVariant().getOptions() : "");
+            itemData.put("variantOptions",
+                    item.getVariant().getOptions() != null ? item.getVariant().getOptions() : "");
             itemData.put("quantity", item.getQuantity().toString());
             itemData.put("unitPrice", formatCurrency(item.getUnitPrice()));
             itemData.put("imageUrl", getProductImageUrl(item.getVariant()));
             orderItems.add(itemData);
         }
         params.put("orderItems", orderItems);
-        
+
         // Action URLs
         params.put("sellerDashboardUrl", buildSellerDashboardUrl());
         params.put("orderDetailsUrl", buildOrderDetailsUrl(order.getOrderNumber()));
-        
+
         // Common data
         addCommonEmailData(params);
-        
+
         return params;
     }
 
     private Map<String, Object> buildOrderStatusUpdateParams(Order order, String oldStatus, String newStatus) {
         Map<String, Object> params = new HashMap<>();
-        
+
         // Calculate order value
-        BigDecimal orderValue = order.getSubtotalAmount().add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
-        
+        BigDecimal orderValue = order.getSubtotalAmount()
+                .add(order.getShippingFee() != null ? order.getShippingFee() : BigDecimal.ZERO);
+
         // Basic info - get customer from master order
         MasterOrder masterOrder = order.getMasterOrder();
         params.put("customerName", masterOrder.getUser().getFullName());
@@ -286,39 +303,41 @@ public class BrevoEmailService implements EmailService {
         params.put("updateDate", formatDateTime(LocalDateTime.now()));
         params.put("totalAmount", formatCurrency(orderValue));
         params.put("paymentMethod", "COD");
-        
+
         // Status-specific data
         OrderStatus currentStatus = order.getOrderStatus();
         params.put("isProcessing", currentStatus == OrderStatus.PROCESSING);
         params.put("isShipped", currentStatus == OrderStatus.SHIPPED);
         params.put("isDelivered", currentStatus == OrderStatus.DELIVERED);
         params.put("isCancelled", isCancelledStatus(currentStatus));
-        
+
         // Tracking info (if shipped) - these fields don't exist in current Order entity
         if (currentStatus == OrderStatus.SHIPPED) {
             params.put("trackingNumber", ""); // Order entity doesn't have trackingNumber
             params.put("carrierName", "Viettel Post"); // Default carrier
             params.put("estimatedDelivery", calculateEstimatedDelivery());
         }
-        
-        // Delivery info (if delivered) - these fields don't exist in current Order entity
+
+        // Delivery info (if delivered) - these fields don't exist in current Order
+        // entity
         if (currentStatus == OrderStatus.DELIVERED) {
             params.put("deliveryDate", formatDate(LocalDateTime.now())); // Approximate
         }
-        
-        // Cancellation info (if cancelled) - these fields don't exist in current Order entity
+
+        // Cancellation info (if cancelled) - these fields don't exist in current Order
+        // entity
         if (isCancelledStatus(currentStatus)) {
             params.put("cancellationDate", formatDate(LocalDateTime.now())); // Approximate
             params.put("cancellationReason", order.getInternalNotes() != null ? order.getInternalNotes() : "");
         }
-        
+
         // Action URLs
         params.put("trackingUrl", buildTrackingUrl(order.getOrderNumber()));
         params.put("reviewUrl", buildReviewUrl(order.getOrderNumber()));
-        
+
         // Common data
         addCommonEmailData(params);
-        
+
         return params;
     }
 
@@ -328,9 +347,9 @@ public class BrevoEmailService implements EmailService {
      * Helper method to check if order status is any type of cancellation
      */
     private boolean isCancelledStatus(OrderStatus status) {
-        return status == OrderStatus.CANCELLED_BY_USER || 
-               status == OrderStatus.CANCELLED_BY_SELLER || 
-               status == OrderStatus.CANCELLED_BY_ADMIN;
+        return status == OrderStatus.CANCELLED_BY_USER ||
+                status == OrderStatus.CANCELLED_BY_SELLER ||
+                status == OrderStatus.CANCELLED_BY_ADMIN;
     }
 
     /**
@@ -341,7 +360,7 @@ public class BrevoEmailService implements EmailService {
         if (addressSnapshot == null || addressSnapshot.isEmpty()) {
             return "";
         }
-        
+
         // Simple parsing - you might want to use JSON parsing if snapshot is JSON
         try {
             String[] parts = addressSnapshot.split(",");
@@ -372,7 +391,8 @@ public class BrevoEmailService implements EmailService {
     }
 
     private String formatCurrency(BigDecimal amount) {
-        if (amount == null) return "0 ₫";
+        if (amount == null)
+            return "0 ₫";
         java.text.NumberFormat nf = java.text.NumberFormat.getCurrencyInstance(new java.util.Locale("vi", "VN"));
         String s = nf.format(amount);
         // Normalize to remove currency code if present, keep symbol and spacing
@@ -380,12 +400,14 @@ public class BrevoEmailService implements EmailService {
     }
 
     private String formatDateTime(LocalDateTime dateTime) {
-        if (dateTime == null) return "";
+        if (dateTime == null)
+            return "";
         return dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
     }
 
     private String formatDate(LocalDateTime dateTime) {
-        if (dateTime == null) return "";
+        if (dateTime == null)
+            return "";
         return dateTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
@@ -425,7 +447,8 @@ public class BrevoEmailService implements EmailService {
             if (item.getVariant() != null && item.getVariant().getMainImageCloudinaryPublicId() != null) {
                 return cloudinaryService.getImageUrl(item.getVariant().getMainImageCloudinaryPublicId());
             }
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {
+        }
         return "https://via.placeholder.com/80x80.png?text=IMG";
     }
 

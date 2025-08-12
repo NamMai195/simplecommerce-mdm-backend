@@ -6,11 +6,13 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.core.env.Environment;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 import java.time.LocalDateTime;
 import java.util.TimeZone;
 
 @SpringBootApplication
+@EnableScheduling
 public class SimplecommerceMdmBackendApplication implements CommandLineRunner {
 
     @Autowired

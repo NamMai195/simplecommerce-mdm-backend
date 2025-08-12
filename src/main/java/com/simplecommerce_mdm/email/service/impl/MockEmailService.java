@@ -35,25 +35,25 @@ public class MockEmailService implements EmailService {
 
     @Override
     public void sendOrderConfirmationEmail(MasterOrder masterOrder) {
-        log.info("[MOCK EMAIL] Sending order confirmation email for order: {} to: {}", 
-            masterOrder.getOrderGroupNumber(), masterOrder.getUser().getEmail());
+        log.info("[MOCK EMAIL] Sending order confirmation email for order: {} to: {}",
+                masterOrder.getOrderGroupNumber(), masterOrder.getUser().getEmail());
     }
 
     @Override
     public void sendNewOrderAlertEmail(Order order) {
-        log.info("[MOCK EMAIL] Sending new order alert email for order: {} to seller: {}", 
-            order.getOrderNumber(), order.getShop().getUser().getEmail());
+        log.info("[MOCK EMAIL] Sending new order alert email for order: {} to seller: {}",
+                order.getOrderNumber(), order.getShop().getUser().getEmail());
     }
 
     @Override
     public void sendOrderStatusUpdateEmail(Order order, String oldStatus, String newStatus) {
-        log.info("[MOCK EMAIL] Sending order status update email for order: {} from {} to {} to customer: {}", 
-            order.getOrderNumber(), oldStatus, newStatus, order.getMasterOrder().getUser().getEmail());
+        log.info("[MOCK EMAIL] Sending order status update email for order: {} from {} to {} to customer: {}",
+                order.getOrderNumber(), oldStatus, newStatus, order.getMasterOrder().getUser().getEmail());
     }
 
     @Override
     public void sendPasswordResetOtpEmail(String to, String otpCode, int expireMinutes, String userName) {
-        log.info("[MOCK EMAIL] Sending password reset OTP to {} - user: {}, otp: {}, expire: {}m", 
-            to, userName, otpCode, expireMinutes);
+        log.info("[MOCK EMAIL] Sending password reset OTP to {} - user: {}, otp: {}, expire: {}m",
+                to, userName, otpCode, expireMinutes);
     }
-} 
+}
