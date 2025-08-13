@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -23,7 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -103,6 +106,7 @@ public class ShopServiceImpl implements ShopService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<ShopAdminResponse> getShopsForAdmin(ShopAdminSearchRequest searchRequest) {
         Sort sort = Sort.by(
                 "desc".equalsIgnoreCase(searchRequest.getSortDirection()) 
@@ -111,21 +115,54 @@ public class ShopServiceImpl implements ShopService {
                 searchRequest.getSortBy()
         );
         
-        Pageable pageable = PageRequest.of(
-                searchRequest.getPage(), 
-                searchRequest.getSize(), 
-                sort
-        );
-        
-        Page<Shop> shopsPage = shopRepository.findShopsForAdmin(
+        // Use native query to avoid type mapping issues
+        List<Shop> allShops = shopRepository.findShopsForAdminNative(
                 searchRequest.getSearchTerm(),
-                parseStatus(searchRequest.getStatus()),
-                searchRequest.getSellerEmail(),
-                searchRequest.getCity(),
-                searchRequest.getCountry(),
-                pageable
+                parseStatus(searchRequest.getStatus())
         );
         
+        // Apply case-insensitive search filtering if searchTerm is provided
+        if (searchRequest.getSearchTerm() != null && !searchRequest.getSearchTerm().trim().isEmpty()) {
+            String searchTerm = searchRequest.getSearchTerm().toLowerCase();
+            allShops = allShops.stream()
+                    .filter(shop -> shop.getName() != null && 
+                                   shop.getName().toLowerCase().contains(searchTerm))
+                    .collect(Collectors.toList());
+        }
+        
+        // Apply sorting
+        allShops.sort((s1, s2) -> {
+            int result = 0;
+            switch (searchRequest.getSortBy().toLowerCase()) {
+                case "createdat":
+                    result = s1.getCreatedAt().compareTo(s2.getCreatedAt());
+                    break;
+                case "name":
+                    result = s1.getName().compareTo(s2.getName());
+                    break;
+                case "isactive":
+                    result = s1.getIsActive().compareTo(s2.getIsActive());
+                    break;
+                default:
+                    result = s1.getCreatedAt().compareTo(s2.getCreatedAt());
+            }
+            return searchRequest.getSortDirection().equalsIgnoreCase("desc") ? -result : result;
+        });
+        
+        // Apply pagination manually
+        int totalElements = allShops.size();
+        int pageSize = searchRequest.getSize();
+        int currentPage = searchRequest.getPage();
+        int startIndex = currentPage * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalElements);
+        
+        List<Shop> pageContent = allShops.subList(startIndex, endIndex);
+        
+        // Create Page object manually
+        Pageable pageable = PageRequest.of(currentPage, pageSize, sort);
+        Page<Shop> shopsPage = new PageImpl<>(pageContent, pageable, totalElements);
+        
+        // Convert to DTOs - this will trigger lazy loading of User and Address
         return shopsPage.map(this::convertToShopAdminResponse);
     }
 

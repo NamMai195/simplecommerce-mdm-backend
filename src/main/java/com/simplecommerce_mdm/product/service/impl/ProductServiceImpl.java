@@ -33,6 +33,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -50,6 +51,8 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.math.BigDecimal;
+import java.util.Arrays;
 
 @Slf4j
 @Service
@@ -442,10 +445,24 @@ public class ProductServiceImpl implements ProductService {
                 searchRequest.getStatus(),
                 searchRequest.getShopId(),
                 searchRequest.getCategoryId(),
-                searchRequest.getSellerEmail(),
                 searchRequest.getSearchTerm(),
                 pageable
         );
+
+        // Filter by seller email if provided (post-query filtering)
+        if (searchRequest.getSellerEmail() != null && !searchRequest.getSellerEmail().trim().isEmpty()) {
+            List<Product> filteredProducts = productPage.getContent().stream()
+                    .filter(product -> product.getShop() != null && 
+                                    product.getShop().getUser() != null &&
+                                    product.getShop().getUser().getEmail() != null &&
+                                    product.getShop().getUser().getEmail().toLowerCase()
+                                            .contains(searchRequest.getSellerEmail().toLowerCase()))
+                    .collect(Collectors.toList());
+            
+            // Create new Page with filtered content
+            Pageable filteredPageable = PageRequest.of(0, filteredProducts.size(), sort);
+            productPage = new PageImpl<>(filteredProducts, filteredPageable, filteredProducts.size());
+        }
 
         return productPage.map(this::convertToProductAdminResponse);
     }
@@ -734,20 +751,68 @@ public class ProductServiceImpl implements ProductService {
     public ProductBuyerListResponse getProductsWithFilters(ProductFilterRequest filterRequest) {
         log.info("Getting products with filters: {}", filterRequest);
 
+        // Create sort object
         Sort sort = filterRequest.getSortDirection().equalsIgnoreCase("desc") 
-            ? Sort.by(filterRequest.getSortBy()).descending() 
-            : Sort.by(filterRequest.getSortBy()).ascending();
-        Pageable pageable = PageRequest.of(filterRequest.getPage(), filterRequest.getSize(), sort);
+                ? Sort.by(filterRequest.getSortBy()).descending() 
+                : Sort.by(filterRequest.getSortBy()).ascending();
 
-        Page<Product> productPage = productRepository.findApprovedProductsWithFilters(
+        // Get all filtered products
+        List<Product> allProducts = productRepository.findApprovedProductsWithFiltersNative(
                 filterRequest.getCategoryId(),
                 filterRequest.getShopId(),
                 filterRequest.getMinPrice(),
                 filterRequest.getMaxPrice(),
-                filterRequest.getSearchTerm(),
-                pageable);
+                filterRequest.getSearchTerm()
+        );
 
-        return buildProductBuyerListResponse(productPage);
+        // Apply sorting manually
+        allProducts.sort((p1, p2) -> {
+            int result = 0;
+            switch (filterRequest.getSortBy().toLowerCase()) {
+                case "createdat":
+                    result = p1.getCreatedAt().compareTo(p2.getCreatedAt());
+                    break;
+                case "name":
+                    result = p1.getName().compareTo(p2.getName());
+                    break;
+                case "baseprice":
+                    result = p1.getBasePrice().compareTo(p2.getBasePrice());
+                    break;
+                case "sku":
+                    result = p1.getSku().compareTo(p2.getSku());
+                    break;
+                default:
+                    result = p1.getCreatedAt().compareTo(p2.getCreatedAt());
+            }
+            return filterRequest.getSortDirection().equalsIgnoreCase("desc") ? -result : result;
+        });
+
+        // Apply pagination manually
+        int totalElements = allProducts.size();
+        int pageSize = filterRequest.getSize();
+        int currentPage = filterRequest.getPage();
+        int startIndex = currentPage * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, totalElements);
+
+        List<Product> pageContent = allProducts.subList(startIndex, endIndex);
+
+        // Convert to DTOs
+        List<ProductBuyerResponse> productResponses = pageContent.stream()
+                .map(this::convertToProductBuyerResponse)
+                .collect(Collectors.toList());
+
+        // Create response
+        ProductBuyerListResponse response = new ProductBuyerListResponse();
+        response.setProducts(productResponses);
+        response.setTotalElements((long) totalElements);
+        response.setTotalPages((int) Math.ceil((double) totalElements / pageSize));
+        response.setCurrentPage(currentPage);
+        response.setPageSize(pageSize);
+        response.setHasNext(currentPage < response.getTotalPages() - 1);
+        response.setHasPrevious(currentPage > 0);
+
+        log.info("Returning {} products out of {} total", productResponses.size(), totalElements);
+        return response;
     }
 
     @Override
@@ -777,19 +842,27 @@ public class ProductServiceImpl implements ProductService {
     public PriceRangeResponse getPriceRange() {
         log.info("Getting price range for all approved products");
 
-        Object[] result = productRepository.findPriceRange();
+        // Use separate methods for better reliability
+        BigDecimal minPrice = productRepository.findMinPriceNative();
+        BigDecimal maxPrice = productRepository.findMaxPriceNative();
+        
+        log.info("Min price from repository: {}", minPrice);
+        log.info("Max price from repository: {}", maxPrice);
         
         PriceRangeResponse response = new PriceRangeResponse();
-        if (result != null && result.length == 2) {
-            response.setMinPrice((java.math.BigDecimal) result[0]);
-            response.setMaxPrice((java.math.BigDecimal) result[1]);
+        
+        // Check if prices are valid (not null and > 0)
+        if (minPrice != null && maxPrice != null && minPrice.compareTo(BigDecimal.ZERO) > 0) {
+            response.setMinPrice(minPrice);
+            response.setMaxPrice(maxPrice);
+            log.info("Setting valid prices: min={}, max={}", minPrice, maxPrice);
         } else {
-            // Default values if no products found
-            response.setMinPrice(java.math.BigDecimal.ZERO);
-            response.setMaxPrice(java.math.BigDecimal.ZERO);
+            log.warn("Invalid prices found: minPrice={}, maxPrice={}", minPrice, maxPrice);
+            response.setMinPrice(BigDecimal.ZERO);
+            response.setMaxPrice(BigDecimal.ZERO);
         }
 
-        log.info("Price range: min={}, max={}", response.getMinPrice(), response.getMaxPrice());
+        log.info("Final price range response: min={}, max={}", response.getMinPrice(), response.getMaxPrice());
         return response;
     }
 

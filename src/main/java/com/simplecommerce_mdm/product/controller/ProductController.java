@@ -265,13 +265,50 @@ public class ProductController {
         return ResponseEntity.ok(response);
     }
 
-    @PostMapping("/filter")
+    @GetMapping("/filter")
     @Operation(summary = "Advanced Product Filtering", 
                description = "Filter products by multiple criteria (category, shop, price, search)")
     public ResponseEntity<ApiResponse<ProductBuyerListResponse>> getProductsWithFilters(
-            @Valid @RequestBody ProductFilterRequest filterRequest) {
+            @Parameter(description = "Category ID") 
+            @RequestParam(required = false) Integer categoryId,
+            
+            @Parameter(description = "Shop ID") 
+            @RequestParam(required = false) Long shopId,
+            
+            @Parameter(description = "Minimum price") 
+            @RequestParam(required = false) BigDecimal minPrice,
+            
+            @Parameter(description = "Maximum price") 
+            @RequestParam(required = false) BigDecimal maxPrice,
+            
+            @Parameter(description = "Search term") 
+            @RequestParam(required = false) String searchTerm,
+            
+            @Parameter(description = "Page number (default 0)") 
+            @RequestParam(defaultValue = "0") Integer page,
+            
+            @Parameter(description = "Page size (default 20)") 
+            @RequestParam(defaultValue = "20") Integer size,
+            
+            @Parameter(description = "Sort field (default createdAt)") 
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            
+            @Parameter(description = "Sort direction (default desc)") 
+            @RequestParam(defaultValue = "desc") String sortDirection) {
 
-        log.info("Getting products with advanced filters: {}", filterRequest);
+        log.info("Getting products with filters: categoryId={}, shopId={}, minPrice={}, maxPrice={}, searchTerm='{}', page={}, size={}", 
+                 categoryId, shopId, minPrice, maxPrice, searchTerm, page, size);
+
+        ProductFilterRequest filterRequest = new ProductFilterRequest();
+        filterRequest.setCategoryId(categoryId);
+        filterRequest.setShopId(shopId);
+        filterRequest.setMinPrice(minPrice);
+        filterRequest.setMaxPrice(maxPrice);
+        filterRequest.setSearchTerm(searchTerm);
+        filterRequest.setPage(page);
+        filterRequest.setSize(size);
+        filterRequest.setSortBy(sortBy);
+        filterRequest.setSortDirection(sortDirection);
 
         ProductBuyerListResponse products = productService.getProductsWithFilters(filterRequest);
 

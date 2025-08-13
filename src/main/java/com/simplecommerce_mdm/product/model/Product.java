@@ -24,6 +24,13 @@ import java.util.Set;
 })
 @SQLDelete(sql = "UPDATE products SET deleted_at = NOW() WHERE id = ?")
 @Where(clause = "deleted_at IS NULL")
+@NamedEntityGraph(
+    name = "Product.withShopAndCategory",
+    attributeNodes = {
+        @NamedAttributeNode("shop"),
+        @NamedAttributeNode("category")
+    }
+)
 public class Product extends BaseEntity {
 
     @Id
