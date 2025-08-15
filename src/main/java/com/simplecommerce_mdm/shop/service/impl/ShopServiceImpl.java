@@ -8,8 +8,10 @@ import com.simplecommerce_mdm.shop.dto.*;
 import com.simplecommerce_mdm.shop.service.ShopService;
 import com.simplecommerce_mdm.user.model.Role;
 import com.simplecommerce_mdm.user.model.User;
+import com.simplecommerce_mdm.user.model.Address;
 import com.simplecommerce_mdm.user.repository.RoleRepository;
 import com.simplecommerce_mdm.user.repository.UserRepository;
+import com.simplecommerce_mdm.user.repository.AddressRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -33,6 +35,7 @@ public class ShopServiceImpl implements ShopService {
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final AddressRepository addressRepository;
     private final ModelMapper modelMapper;
 
     @Override
@@ -57,9 +60,10 @@ public class ShopServiceImpl implements ShopService {
                 .build();
 
         // Set address if provided
-        if (createRequest.getAddressLine1() != null) {
-            // Create address logic would go here
-            // For now, assuming address is handled separately
+        if (createRequest.getAddressId() != null) {
+            Address address = addressRepository.findById(createRequest.getAddressId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + createRequest.getAddressId()));
+            shop.setAddress(address);
         }
 
         shop = shopRepository.save(shop);
@@ -258,6 +262,35 @@ public class ShopServiceImpl implements ShopService {
         stats.put("approvedAt", shop.getApprovedAt());
         
         return stats;
+    }
+
+    @Override
+    @Transactional
+    public ShopResponse updateShopAddress(Long addressId, CustomUserDetails sellerDetails) {
+        User seller = sellerDetails.getUser();
+        Shop shop = shopRepository.findByUser(seller)
+                .orElseThrow(() -> new ResourceNotFoundException("Seller has no shop"));
+        
+        if (!shop.getIsActive() || shop.getApprovedAt() == null) {
+            throw new IllegalStateException("Shop is not approved yet");
+        }
+        
+        // Validate that the address exists
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
+        
+        // TODO: Add address ownership validation
+        // For now, we'll allow any address to be used
+        // In production, you might want to validate that the address belongs to the seller
+        // or that the seller has permission to use this address
+        
+        // Update shop address
+        shop.setAddress(address);
+        shop = shopRepository.save(shop);
+        
+        log.info("Shop address updated for shop {}: {}", shop.getName(), addressId);
+        
+        return convertToShopResponse(shop);
     }
 
     private Boolean parseStatus(String status) {

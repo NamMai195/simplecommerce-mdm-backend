@@ -30,4 +30,7 @@ public interface ShopService {
     ShopResponse getSellerShop(CustomUserDetails sellerDetails);
     
     Object getSellerShopStats(CustomUserDetails sellerDetails);
+    
+    // Shop address management
+    ShopResponse updateShopAddress(Long addressId, CustomUserDetails sellerDetails);
 } 

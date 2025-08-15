@@ -14,13 +14,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CheckoutRequest {
 
-    @NotNull(message = "Shipping address is required")
-    @NotBlank(message = "Shipping address cannot be blank")
-    @Size(max = 1000, message = "Shipping address must not exceed 1000 characters")
-    private String shippingAddress;
+    @NotNull(message = "Shipping address ID is required")
+    private Long shippingAddressId;
 
-    @Size(max = 1000, message = "Billing address must not exceed 1000 characters")
-    private String billingAddress;
+    private Long billingAddressId; // Optional - if null, will use shipping address
 
     @Size(max = 20, message = "Customer phone must not exceed 20 characters")
     private String customerPhone;

@@ -1,0 +1,428 @@
+{
+	"info": {
+		"_postman_id": "address-management-api",
+		"name": "Address Management API",
+		"description": "Collection for testing Address Management APIs in SimpleCommerce MDM Backend",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.accessToken) {",
+									"        pm.environment.set('accessToken', responseJson.accessToken);",
+									"        console.log('Access token saved:', responseJson.accessToken);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "Address Management",
+			"item": [
+				{
+					"name": "Create Address",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"streetAddress1\": \"123 Nguyen Van Linh\",\n  \"streetAddress2\": \"Floor 5, Room 501\",\n  \"ward\": \"Phuong 7\",\n  \"district\": \"Quan 7\",\n  \"city\": \"Ho Chi Minh\",\n  \"postalCode\": \"700000\",\n  \"countryCode\": \"VN\",\n  \"contactFullName\": \"Nguyen Van A\",\n  \"contactPhoneNumber\": \"0123456789\",\n  \"addressType\": \"HOME\",\n  \"isDefaultShipping\": true,\n  \"isDefaultBilling\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/addresses",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    const responseJson = pm.response.json();",
+									"    if (responseJson.data && responseJson.data.id) {",
+									"        pm.environment.set('addressId', responseJson.data.id);",
+									"        console.log('Address ID saved:', responseJson.data.id);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					]
+				},
+				{
+					"name": "Get User Addresses",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/addresses",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Address by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/addresses/{{addressId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"{{addressId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Address",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"streetAddress2\": \"Floor 6, Room 601\",\n  \"contactPhoneNumber\": \"0987654321\",\n  \"isDefaultShipping\": false\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/v1/addresses/{{addressId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"{{addressId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Set Default Shipping Address",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/addresses/{{addressId}}/default-shipping",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"{{addressId}}",
+								"default-shipping"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Set Default Billing Address",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/addresses/{{addressId}}/default-billing",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"{{addressId}}",
+								"default-billing"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Default Shipping Address",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/addresses/default-shipping",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"default-shipping"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Default Billing Address",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/addresses/default-billing",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"default-billing"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Address",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/addresses/{{addressId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"addresses",
+								"{{addressId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Admin Address Management",
+			"item": [
+				{
+					"name": "Get All Addresses (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminAccessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/addresses",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"addresses"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Addresses by User ID (Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{adminAccessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/v1/admin/addresses/user/{{userId}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"v1",
+								"admin",
+								"addresses",
+								"user",
+								"{{userId}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8080",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "adminAccessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "addressId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
