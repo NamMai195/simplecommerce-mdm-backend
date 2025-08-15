@@ -182,4 +182,22 @@ public class ProductSellerController {
 
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/{productId}/variants/{variantId}")
+    @Operation(summary = "Delete Product Variant", description = "API delete specific variant from product for seller")
+    public ResponseEntity<ApiResponse<Void>> deleteVariant(
+            @PathVariable Long productId,
+            @PathVariable Long variantId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        log.info("Deleting variant {} from product {} for seller: {}", variantId, productId, userDetails.getUser().getEmail());
+
+        productService.deleteVariant(productId, variantId, userDetails);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message("Variant deleted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
 } 

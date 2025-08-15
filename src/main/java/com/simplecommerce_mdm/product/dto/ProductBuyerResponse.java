@@ -4,7 +4,7 @@ import com.simplecommerce_mdm.common.enums.ProductStatus;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -16,7 +16,7 @@ public class ProductBuyerResponse {
     private BigDecimal basePrice;
     private ProductStatus status;
     private Boolean isFeatured;
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
     
     // Category info
     private Integer categoryId;
