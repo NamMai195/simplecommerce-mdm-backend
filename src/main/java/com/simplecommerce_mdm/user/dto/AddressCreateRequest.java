@@ -31,7 +31,7 @@ public class AddressCreateRequest {
 
     @NotBlank(message = "City is required")
     @Size(max = 100, message = "City must not exceed 100 characters")
-    private String city;
+    private String city; 
 
     @Size(max = 20, message = "Postal code must not exceed 20 characters")
     private String postalCode;
