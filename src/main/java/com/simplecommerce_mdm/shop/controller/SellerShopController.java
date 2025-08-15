@@ -3,6 +3,7 @@ package com.simplecommerce_mdm.shop.controller;
 import com.simplecommerce_mdm.common.dto.ApiResponse;
 import com.simplecommerce_mdm.config.CustomUserDetails;
 import com.simplecommerce_mdm.shop.dto.ShopResponse;
+import com.simplecommerce_mdm.shop.dto.ShopAddressUpdateRequest;
 import com.simplecommerce_mdm.shop.service.ShopService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 @Slf4j
 @RestController
@@ -79,6 +81,35 @@ public class SellerShopController {
                     .body(ApiResponse.<Object>builder()
                             .statusCode(HttpStatus.NOT_FOUND.value())
                             .message("Unable to retrieve shop statistics")
+                            .build());
+        }
+    }
+
+    @PutMapping("/address")
+    @PreAuthorize("hasRole('SELLER')")
+    @Operation(summary = "Update shop address", 
+               description = "Seller can update their shop address")
+    public ResponseEntity<ApiResponse<ShopResponse>> updateShopAddress(
+            @Valid @RequestBody ShopAddressUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        
+        log.info("Seller {} updating shop address to: {}", userDetails.getUser().getEmail(), request.getAddressId());
+        
+        try {
+            ShopResponse shopResponse = shopService.updateShopAddress(request.getAddressId(), userDetails);
+            
+            return ResponseEntity.ok(
+                    ApiResponse.<ShopResponse>builder()
+                            .statusCode(HttpStatus.OK.value())
+                            .message("Shop address updated successfully")
+                            .data(shopResponse)
+                            .build());
+                            
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.<ShopResponse>builder()
+                            .statusCode(HttpStatus.BAD_REQUEST.value())
+                            .message("Failed to update shop address: " + e.getMessage())
                             .build());
         }
     }

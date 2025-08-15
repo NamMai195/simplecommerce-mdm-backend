@@ -77,6 +77,10 @@ public class ProductServiceImpl implements ProductService {
 
         Shop shop = shopRepository.findByUser(seller)
                 .orElseThrow(() -> new ResourceNotFoundException("Shop not found for the current seller."));
+        
+        // Validate shop status before allowing product creation
+        validateShopStatusForProductCreation(shop);
+        
         Category category = categoryRepository.findById(productRequest.getCategoryId())
                 .orElseThrow(() -> new ResourceNotFoundException("Category not found with id: " + productRequest.getCategoryId()));
 
@@ -212,6 +216,9 @@ public class ProductServiceImpl implements ProductService {
 
         Shop shop = shopRepository.findByUser(seller)
                 .orElseThrow(() -> new ResourceNotFoundException("Shop not found for the current seller."));
+
+        // Validate shop status for product updates (less strict than creation)
+        validateShopStatusForProductUpdate(shop);
 
         // Find product by ID and shop (authorization check)
         Product existingProduct = productRepository.findByIdAndShop(productId, shop)
@@ -362,6 +369,9 @@ public class ProductServiceImpl implements ProductService {
         Shop shop = shopRepository.findByUser(seller)
                 .orElseThrow(() -> new ResourceNotFoundException("Shop not found for the current seller."));
 
+        // Validate shop status for product deletion (less strict than creation)
+        validateShopStatusForProductUpdate(shop);
+
         // Find product by ID and shop (authorization check)
         Product product = productRepository.findByIdAndShop(productId, shop)
                 .orElseThrow(() -> new ResourceNotFoundException(
@@ -417,6 +427,35 @@ public class ProductServiceImpl implements ProductService {
         String normalized = Normalizer.normalize(nowhitespace, Normalizer.Form.NFD);
         String slug = NONLATIN.matcher(normalized).replaceAll("");
         return slug.toLowerCase(Locale.ENGLISH);
+    }
+    
+    /**
+     * Validates shop status for product creation
+     * Only allows product creation for ACTIVE and APPROVED shops
+     */
+    private void validateShopStatusForProductCreation(Shop shop) {
+        if (!shop.getIsActive()) {
+            throw new IllegalStateException("Cannot create new products. Shop is currently inactive or suspended.");
+        }
+        
+        if (shop.getApprovedAt() == null) {
+            throw new IllegalStateException("Cannot create new products. Shop is not yet approved by admin.");
+        }
+        
+        log.info("Shop status validation passed for shop: {} (ID: {})", shop.getName(), shop.getId());
+    }
+    
+    /**
+     * Validates shop status for product updates
+     * Allows updates for ACTIVE shops (even if not approved yet)
+     * But blocks updates for SUSPENDED shops
+     */
+    private void validateShopStatusForProductUpdate(Shop shop) {
+        if (!shop.getIsActive()) {
+            throw new IllegalStateException("Cannot update products. Shop is currently suspended or inactive.");
+        }
+        
+        log.info("Shop status validation for updates passed for shop: {} (ID: {})", shop.getName(), shop.getId());
     }
 
     // ============================ ADMIN METHODS ============================
@@ -884,4 +923,4 @@ public class ProductServiceImpl implements ProductService {
         log.info("Found {} products", buyerProducts.size());
         return response;
     }
-} 
+}  

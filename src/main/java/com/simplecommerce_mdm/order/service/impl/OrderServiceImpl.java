@@ -13,7 +13,9 @@ import com.simplecommerce_mdm.product.model.Shop;
 import com.simplecommerce_mdm.product.repository.ProductVariantRepository;
 import com.simplecommerce_mdm.product.repository.ShopRepository;
 import com.simplecommerce_mdm.user.model.User;
+import com.simplecommerce_mdm.user.model.Address;
 import com.simplecommerce_mdm.user.repository.UserRepository;
+import com.simplecommerce_mdm.user.repository.AddressRepository;
 import com.simplecommerce_mdm.cloudinary.service.CloudinaryService;
 import com.simplecommerce_mdm.email.service.EmailService;
 import com.simplecommerce_mdm.email.events.OrderEmailEvents;
@@ -52,6 +54,7 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ShopRepository shopRepository;
+    private final AddressRepository addressRepository;
     private final CloudinaryService cloudinaryService;
     private final ModelMapper modelMapper;
     private final EmailService emailService;
@@ -313,13 +316,28 @@ public class OrderServiceImpl implements OrderService {
     }
     
     private MasterOrder createMasterOrder(User user, CheckoutRequest request, PaymentMethod paymentMethod, String orderGroupNumber) {
+        // Fetch shipping address
+        Address shippingAddress = addressRepository.findById(request.getShippingAddressId())
+                .orElseThrow(() -> new ResourceNotFoundException("Shipping address not found with id: " + request.getShippingAddressId()));
+        
+        // Fetch billing address (use shipping address if not specified)
+        Address billingAddress = shippingAddress;
+        if (request.getBillingAddressId() != null) {
+            billingAddress = addressRepository.findById(request.getBillingAddressId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Billing address not found with id: " + request.getBillingAddressId()));
+        }
+        
+        // Create address snapshots
+        String shippingAddressSnapshot = formatAddressSnapshot(shippingAddress);
+        String billingAddressSnapshot = formatAddressSnapshot(billingAddress);
+        
         return MasterOrder.builder()
                 .orderGroupNumber(orderGroupNumber)
                 .user(user)
                 .customerEmail(user.getEmail())
                 .customerPhone(request.getCustomerPhone() != null ? request.getCustomerPhone() : user.getPhoneNumber())
-                .shippingAddressSnapshot(request.getShippingAddress())
-                .billingAddressSnapshot(request.getBillingAddress() != null ? request.getBillingAddress() : request.getShippingAddress())
+                .shippingAddressSnapshot(shippingAddressSnapshot)
+                .billingAddressSnapshot(billingAddressSnapshot)
                 .overallStatus(MasterOrderStatus.AWAITING_CONFIRMATION) // COD starts with awaiting confirmation
                 .totalAmountPaid(BigDecimal.ZERO) // Will be updated later
                 .paymentMethodSnapshot(paymentMethod.getName())
@@ -589,5 +607,34 @@ public class OrderServiceImpl implements OrderService {
             log.error("Failed to publish status update email event for order {}: {}", 
                 order.getOrderNumber(), e.getMessage(), e);
         }
+    }
+    
+    /**
+     * Format address snapshot for order storage
+     */
+    private String formatAddressSnapshot(Address address) {
+        StringBuilder sb = new StringBuilder();
+        if (address.getStreetAddress1() != null) {
+            sb.append(address.getStreetAddress1());
+        }
+        if (address.getStreetAddress2() != null && !address.getStreetAddress2().trim().isEmpty()) {
+            sb.append(", ").append(address.getStreetAddress2());
+        }
+        if (address.getWard() != null && !address.getWard().trim().isEmpty()) {
+            sb.append(", ").append(address.getWard());
+        }
+        if (address.getDistrict() != null) {
+            sb.append(", ").append(address.getDistrict());
+        }
+        if (address.getCity() != null) {
+            sb.append(", ").append(address.getCity());
+        }
+        if (address.getPostalCode() != null && !address.getPostalCode().trim().isEmpty()) {
+            sb.append(", ").append(address.getPostalCode());
+        }
+        if (address.getCountryCode() != null) {
+            sb.append(", ").append(address.getCountryCode());
+        }
+        return sb.toString();
     }
 } 
