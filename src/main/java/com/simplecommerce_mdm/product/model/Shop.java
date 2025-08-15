@@ -73,7 +73,7 @@ public class Shop extends BaseEntity {
     @JoinColumn(name = "address_id")
     private Address address;
 
-    @Column(name = "rating", precision = 3, scale = 2)
+    @Column(name = "rating")
     @Builder.Default
     private BigDecimal rating = BigDecimal.valueOf(0.00);
 

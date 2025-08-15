@@ -91,4 +91,10 @@ public class Product extends BaseEntity {
     @OneToMany(mappedBy = "product", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Builder.Default
     private Set<ProductVariant> variants = new HashSet<>();
-} 
+    
+    @Column(name = "rating")
+    private Float rating;
+    
+    @Column(name = "review_count")
+    private Integer reviewCount;
+}
