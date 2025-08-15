@@ -7,6 +7,7 @@ import com.simplecommerce_mdm.common.enums.ImageTargetType;
 import com.simplecommerce_mdm.common.enums.ProductStatus;
 import com.simplecommerce_mdm.config.CustomUserDetails;
 import com.simplecommerce_mdm.exception.ResourceNotFoundException;
+import com.simplecommerce_mdm.exception.InvalidDataException;
 import com.simplecommerce_mdm.product.dto.PriceRangeResponse;
 import com.simplecommerce_mdm.product.dto.ProductAdminResponse;
 import com.simplecommerce_mdm.product.dto.ProductAdminSearchRequest;
@@ -123,6 +124,9 @@ public class ProductServiceImpl implements ProductService {
         response.setCategoryId(savedProduct.getCategory().getId());
         response.setShopId(savedProduct.getShop().getId());
         
+        // Explicitly set timestamps to ensure they are not null
+        response.setCreatedAt(savedProduct.getCreatedAt());
+        
         return response;
     }
 
@@ -201,7 +205,10 @@ public class ProductServiceImpl implements ProductService {
 
         log.info("Found product: {} for seller: {}", product.getName(), seller.getEmail());
         
-        return convertToProductResponse(product);
+        ProductResponse response = convertToProductResponse(product);
+        // Explicitly set timestamps to ensure they are not null
+        response.setCreatedAt(product.getCreatedAt());
+        return response;
     }
 
     @Override
@@ -262,7 +269,10 @@ public class ProductServiceImpl implements ProductService {
             addNewProductImages(savedProduct, newImages);
         }
 
-        return convertToProductResponse(savedProduct);
+        ProductResponse response = convertToProductResponse(savedProduct);
+        // Explicitly set timestamps to ensure they are not null
+        response.setCreatedAt(savedProduct.getCreatedAt());
+        return response;
     }
 
     private boolean checkIfNeedsReapproval(Product existingProduct, ProductUpdateRequest updateRequest) {
@@ -375,6 +385,42 @@ public class ProductServiceImpl implements ProductService {
         
         log.info("Successfully deleted product: {} (ID: {}) for seller: {}", 
                 product.getName(), productId, seller.getEmail());
+    }
+
+    @Override
+    @Transactional
+    public void deleteVariant(Long productId, Long variantId, CustomUserDetails sellerDetails) {
+        User seller = sellerDetails.getUser();
+        log.info("Deleting variant {} from product {} for seller: {}", variantId, productId, seller.getEmail());
+
+        Shop shop = shopRepository.findByUser(seller)
+                .orElseThrow(() -> new ResourceNotFoundException("Shop not found for the current seller."));
+
+        // Find product by ID and shop (authorization check)
+        Product product = productRepository.findByIdAndShop(productId, shop)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id: " + productId + " or you don't have permission to access it."));
+
+        // Find variant by ID
+        ProductVariant variant = product.getVariants().stream()
+                .filter(v -> v.getId().equals(variantId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Variant not found with id: " + variantId + " in product " + productId));
+
+        // Check if this is the only variant (product must have at least one variant)
+        if (product.getVariants().size() <= 1) {
+            throw new InvalidDataException("Cannot delete the only variant. Product must have at least one variant.");
+        }
+
+        // Remove variant from product's variants collection
+        product.getVariants().remove(variant);
+        
+        // Save the updated product (this will cascade to variant deletion)
+        productRepository.save(product);
+        
+        log.info("Successfully deleted variant: {} (ID: {}) from product: {} (ID: {}) for seller: {}", 
+                variant.getSku(), variantId, product.getName(), productId, seller.getEmail());
     }
 
     // Optional method to cleanup Cloudinary images when deleting product

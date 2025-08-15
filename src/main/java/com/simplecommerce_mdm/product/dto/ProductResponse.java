@@ -4,7 +4,7 @@ import com.simplecommerce_mdm.common.enums.ProductStatus;
 import lombok.Data;
 
 import java.math.BigDecimal;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -17,7 +17,7 @@ public class ProductResponse {
     private Integer categoryId;
     private Long shopId;
     private ProductStatus status;
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
     private List<ProductVariantResponse> variants;
     private List<String> imageUrls; // Or a more complex image object
 

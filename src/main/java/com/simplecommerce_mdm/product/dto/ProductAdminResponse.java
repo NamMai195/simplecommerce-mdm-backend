@@ -4,6 +4,7 @@ import com.simplecommerce_mdm.common.enums.ProductStatus;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 
@@ -21,7 +22,7 @@ public class ProductAdminResponse {
     private String shopName;
     private String sellerEmail;
     private ProductStatus status;
-    private OffsetDateTime createdAt;
+    private LocalDateTime createdAt;
     private OffsetDateTime approvedAt;
     private String rejectionReason;
     private Boolean isFeatured;

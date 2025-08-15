@@ -30,6 +30,9 @@ public interface ProductService {
     
     void deleteProduct(Long productId, CustomUserDetails sellerDetails);
     
+    // Variant management
+    void deleteVariant(Long productId, Long variantId, CustomUserDetails sellerDetails);
+    
     // Admin methods
     Page<ProductAdminResponse> getProductsForAdmin(ProductAdminSearchRequest searchRequest);
     
