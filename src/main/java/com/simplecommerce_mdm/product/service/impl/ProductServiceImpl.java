@@ -54,6 +54,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.math.BigDecimal;
 import java.util.Arrays;
+import com.simplecommerce_mdm.product.repository.ProductVariantRepository;
 
 @Slf4j
 @Service
@@ -69,6 +70,7 @@ public class ProductServiceImpl implements ProductService {
     private final ProductImageRepository productImageRepository;
     private final CloudinaryService cloudinaryService;
     private final ModelMapper modelMapper;
+    private final ProductVariantRepository productVariantRepository;
 
     @Override
     @Transactional
@@ -413,10 +415,14 @@ public class ProductServiceImpl implements ProductService {
             throw new InvalidDataException("Cannot delete the only variant. Product must have at least one variant.");
         }
 
+        // Clear the bidirectional relationship
+        variant.setProduct(null);
+        
         // Remove variant from product's variants collection
+        // With CascadeType.REMOVE and orphanRemoval = true, this will automatically trigger deletion
         product.getVariants().remove(variant);
         
-        // Save the updated product (this will cascade to variant deletion)
+        // Save the updated product - JPA will handle variant deletion due to cascade and orphanRemoval
         productRepository.save(product);
         
         log.info("Successfully deleted variant: {} (ID: {}) from product: {} (ID: {}) for seller: {}", 
@@ -443,6 +449,22 @@ public class ProductServiceImpl implements ProductService {
         ProductResponse response = modelMapper.map(product, ProductResponse.class);
         response.setCategoryId(product.getCategory().getId());
         response.setShopId(product.getShop().getId());
+        
+        // Manually map variants to ensure proper ID mapping
+        List<ProductResponse.ProductVariantResponse> variantResponses = product.getVariants().stream()
+                .map(variant -> {
+                    ProductResponse.ProductVariantResponse variantResponse = new ProductResponse.ProductVariantResponse();
+                    variantResponse.setId(variant.getId());
+                    variantResponse.setSku(variant.getSku());
+                    variantResponse.setFinalPrice(variant.getFinalPrice());
+                    variantResponse.setCompareAtPrice(variant.getCompareAtPrice());
+                    variantResponse.setStockQuantity(variant.getStockQuantity());
+                    variantResponse.setOptions(variant.getOptions());
+                    variantResponse.setIsActive(variant.getIsActive());
+                    return variantResponse;
+                })
+                .collect(Collectors.toList());
+        response.setVariants(variantResponses);
         
         // Get image URLs for this product
         List<ProductImage> productImages = productImageRepository.findByTargetIdAndTargetType(
@@ -706,6 +728,7 @@ public class ProductServiceImpl implements ProductService {
                 .map(variant -> {
                     ProductBuyerResponse.ProductVariantBuyerResponse variantResponse = 
                         new ProductBuyerResponse.ProductVariantBuyerResponse();
+                    variantResponse.setId(variant.getId());  // Add missing variant ID
                     variantResponse.setSku(variant.getSku());
                     variantResponse.setFinalPrice(variant.getFinalPrice());
                     variantResponse.setCompareAtPrice(variant.getCompareAtPrice());
