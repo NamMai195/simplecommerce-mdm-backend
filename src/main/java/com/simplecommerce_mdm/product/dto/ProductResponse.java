@@ -23,9 +23,12 @@ public class ProductResponse {
 
     @Data
     public static class ProductVariantResponse {
+        private Long id;
         private String sku;
         private BigDecimal finalPrice;
+        private BigDecimal compareAtPrice;
         private Integer stockQuantity;
         private String options;
+        private Boolean isActive;
     }
 } 

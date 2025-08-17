@@ -36,6 +36,7 @@ public class ProductBuyerResponse {
     
     @Data
     public static class ProductVariantBuyerResponse {
+        private Long id;
         private String sku;
         private BigDecimal finalPrice;
         private BigDecimal compareAtPrice;
