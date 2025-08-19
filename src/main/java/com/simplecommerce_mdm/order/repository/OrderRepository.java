@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Collection;
+import java.time.OffsetDateTime;
 import java.util.Optional;
 
 @Repository
@@ -69,6 +71,28 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      */
     @Query("SELECT o FROM Order o WHERE o.orderStatus = 'AWAITING_CONFIRMATION' ORDER BY o.createdAt ASC")
     List<Order> findOrdersAwaitingConfirmation();
+
+    /**
+     * Find orders for a shop in a date range filtered by statuses
+     */
+    List<Order> findByShopIdAndCreatedAtBetweenAndOrderStatusIn(
+            Long shopId,
+            OffsetDateTime start,
+            OffsetDateTime end,
+            Collection<OrderStatus> statuses);
+
+    /**
+     * Find orders in a date range filtered by statuses (all shops)
+     */
+    List<Order> findByCreatedAtBetweenAndOrderStatusIn(
+            OffsetDateTime start,
+            OffsetDateTime end,
+            Collection<OrderStatus> statuses);
+
+    /**
+     * Find orders filtered by statuses
+     */
+    List<Order> findByOrderStatusIn(Collection<OrderStatus> statuses);
 
     /**
      * Search orders for admin
