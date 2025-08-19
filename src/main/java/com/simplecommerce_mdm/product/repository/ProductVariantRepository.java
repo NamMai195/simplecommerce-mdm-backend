@@ -10,6 +10,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.repository.query.Param;
 
 @Repository
 public interface ProductVariantRepository extends JpaRepository<ProductVariant, Long> {
@@ -49,4 +50,10 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant, 
      * Find variant by SKU
      */
     Optional<ProductVariant> findBySku(String sku);
+
+    // Low stock variants for a shop
+    @Query("SELECT pv.id, pv.sku, pv.product.name, pv.stockQuantity FROM ProductVariant pv " +
+           "WHERE pv.product.shop.id = :shopId AND pv.isActive = true AND pv.stockQuantity <= :threshold " +
+           "ORDER BY pv.stockQuantity ASC")
+    List<Object[]> findLowStockVariantsByShop(@Param("shopId") Long shopId, @Param("threshold") Integer threshold);
 } 

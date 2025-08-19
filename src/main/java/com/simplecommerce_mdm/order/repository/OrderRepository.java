@@ -10,6 +10,8 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Collection;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -69,6 +71,41 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      */
     @Query("SELECT o FROM Order o WHERE o.orderStatus = 'AWAITING_CONFIRMATION' ORDER BY o.createdAt ASC")
     List<Order> findOrdersAwaitingConfirmation();
+
+    /**
+     * Find orders for a shop in a date range filtered by statuses
+     */
+    List<Order> findByShopIdAndCreatedAtBetweenAndOrderStatusIn(
+            Long shopId,
+            LocalDateTime start,
+            LocalDateTime end,
+            Collection<OrderStatus> statuses);
+
+    /**
+     * Find orders in a date range filtered by statuses (all shops)
+     */
+    List<Order> findByCreatedAtBetweenAndOrderStatusIn(
+            LocalDateTime start,
+            LocalDateTime end,
+            Collection<OrderStatus> statuses);
+
+    /**
+     * Find orders filtered by statuses
+     */
+    List<Order> findByOrderStatusIn(Collection<OrderStatus> statuses);
+
+    // Average order value for a shop within date range (completed orders)
+    @Query("SELECT COALESCE(AVG( (o.subtotalAmount + o.shippingFee + o.taxAmount) - (o.itemDiscountAmount + o.shippingDiscountAmount) ),0) " +
+           "FROM Order o WHERE o.shop.id = :shopId AND o.orderStatus = 'COMPLETED' AND o.createdAt BETWEEN :start AND :end")
+    java.math.BigDecimal avgOrderValueForShop(@Param("shopId") Long shopId,
+                                             @Param("start") LocalDateTime start,
+                                             @Param("end") LocalDateTime end);
+
+    // Returns count by shop within date range
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.shop.id = :shopId AND o.orderStatus IN ('RETURN_REQUESTED','RETURN_APPROVED','RETURNED') AND o.createdAt BETWEEN :start AND :end")
+    long countReturnsForShop(@Param("shopId") Long shopId,
+                             @Param("start") LocalDateTime start,
+                             @Param("end") LocalDateTime end);
 
     /**
      * Search orders for admin

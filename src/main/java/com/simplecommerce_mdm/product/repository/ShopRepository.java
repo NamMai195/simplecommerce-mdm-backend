@@ -12,6 +12,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.List;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 @Repository
 public interface ShopRepository extends JpaRepository<Shop, Long> {
@@ -60,4 +62,9 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     
     @Query("SELECT COUNT(p) FROM Product p WHERE p.shop.id = :shopId AND p.status = 'PENDING_APPROVAL'")
     Integer countPendingProductsByShopId(@Param("shopId") Long shopId);
+
+    // Admin: top shops by completed order revenue
+    @Query("SELECT o.shop.id, o.shop.name, COALESCE(SUM( (o.subtotalAmount + o.shippingFee + o.taxAmount) - (o.itemDiscountAmount + o.shippingDiscountAmount) ),0) as revenue " +
+           "FROM Order o WHERE o.orderStatus = 'COMPLETED' GROUP BY o.shop.id, o.shop.name ORDER BY revenue DESC")
+    List<Object[]> findTopShopsByRevenue();
 } 
