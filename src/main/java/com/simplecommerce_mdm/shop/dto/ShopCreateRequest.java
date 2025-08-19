@@ -21,11 +21,6 @@ public class ShopCreateRequest {
     @Size(max = 20, message = "Contact phone must not exceed 20 characters")
     private String contactPhone;
     
-    // Address fields
-    private String addressLine1;
-    private String addressLine2;
-    private String city;
-    private String state;
-    private String country;
-    private String postalCode;
+    // Address ID (optional - can be set later)
+    private Long addressId;
 } 
