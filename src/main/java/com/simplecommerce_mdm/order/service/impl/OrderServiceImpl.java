@@ -202,6 +202,9 @@ public class OrderServiceImpl implements OrderService {
         // Restore inventory
         restoreInventoryForOrder(order);
         
+        // Recalculate master order overall status after a child order is cancelled
+        updateMasterOrderStatus(order.getMasterOrder());
+        
         log.info("Order {} cancelled by user {}", orderId, userId);
     }
 
@@ -450,9 +453,21 @@ public class OrderServiceImpl implements OrderService {
             o.getOrderStatus() == OrderStatus.CANCELLED_BY_USER ||
             o.getOrderStatus() == OrderStatus.CANCELLED_BY_SELLER ||
             o.getOrderStatus() == OrderStatus.CANCELLED_BY_ADMIN);
+        boolean allCancelled = orders.stream().allMatch(o -> 
+            o.getOrderStatus() == OrderStatus.CANCELLED_BY_USER ||
+            o.getOrderStatus() == OrderStatus.CANCELLED_BY_SELLER ||
+            o.getOrderStatus() == OrderStatus.CANCELLED_BY_ADMIN);
+        boolean allAwaiting = orders.stream().allMatch(o -> o.getOrderStatus() == OrderStatus.AWAITING_CONFIRMATION);
+        boolean allPendingPayment = orders.stream().allMatch(o -> o.getOrderStatus() == OrderStatus.PENDING_PAYMENT);
         
-        if (allCompleted) {
+        if (allPendingPayment) {
+            masterOrder.setOverallStatus(MasterOrderStatus.PENDING_PAYMENT);
+        } else if (allAwaiting) {
+            masterOrder.setOverallStatus(MasterOrderStatus.AWAITING_CONFIRMATION);
+        } else if (allCompleted) {
             masterOrder.setOverallStatus(MasterOrderStatus.COMPLETED);
+        } else if (allCancelled) {
+            masterOrder.setOverallStatus(MasterOrderStatus.CANCELLED);
         } else if (anyCancelled) {
             masterOrder.setOverallStatus(MasterOrderStatus.PARTIALLY_CANCELLED);
         } else {

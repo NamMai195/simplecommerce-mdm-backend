@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @Slf4j
 @RestController
@@ -54,6 +55,38 @@ public class UserShopController {
                             .message(e.getMessage())
                             .build());
         }
+    }
+
+    @PutMapping("/logo")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Update shop logo", description = "Upload a new shop logo (avatar)")
+    public ResponseEntity<ApiResponse<ShopResponse>> updateShopLogo(
+            @RequestPart("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        ShopResponse shopResponse = shopService.updateShopLogo(file, userDetails);
+        return ResponseEntity.ok(
+                ApiResponse.<ShopResponse>builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message("Shop logo updated successfully")
+                        .data(shopResponse)
+                        .build());
+    }
+
+    @PutMapping("/cover")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Update shop cover image", description = "Upload a new background image for shop")
+    public ResponseEntity<ApiResponse<ShopResponse>> updateShopCover(
+            @RequestPart("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        ShopResponse shopResponse = shopService.updateShopCover(file, userDetails);
+        return ResponseEntity.ok(
+                ApiResponse.<ShopResponse>builder()
+                        .statusCode(HttpStatus.OK.value())
+                        .message("Shop cover updated successfully")
+                        .data(shopResponse)
+                        .build());
     }
 
     @GetMapping
