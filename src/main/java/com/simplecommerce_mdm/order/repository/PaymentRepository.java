@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 @Repository
@@ -62,4 +63,9 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
      * Count payments by status
      */
     long countByStatus(PaymentStatus status);
+
+    // Payment breakdown: count and sum by method within date range
+    @Query("SELECT pm.code, COUNT(p.id), COALESCE(SUM(p.amount),0) FROM Payment p JOIN p.paymentMethod pm " +
+           "WHERE p.status = 'COMPLETED' AND p.createdAt BETWEEN :start AND :end GROUP BY pm.code")
+    List<Object[]> breakdownByMethodAll(LocalDateTime start, LocalDateTime end);
 } 

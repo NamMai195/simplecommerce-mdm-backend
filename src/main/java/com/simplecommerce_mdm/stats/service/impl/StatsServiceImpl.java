@@ -7,10 +7,12 @@ import com.simplecommerce_mdm.order.model.Order;
 import com.simplecommerce_mdm.order.repository.OrderRepository;
 import com.simplecommerce_mdm.product.model.Shop;
 import com.simplecommerce_mdm.product.repository.ProductRepository;
+import com.simplecommerce_mdm.product.repository.ProductVariantRepository;
 import com.simplecommerce_mdm.product.repository.ShopRepository;
 import com.simplecommerce_mdm.stats.dto.*;
 import com.simplecommerce_mdm.stats.service.StatsService;
 import com.simplecommerce_mdm.user.repository.UserRepository;
+import com.simplecommerce_mdm.order.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.OffsetDateTime;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,7 +32,10 @@ public class StatsServiceImpl implements StatsService {
     private final OrderRepository orderRepository;
     private final ShopRepository shopRepository;
     private final ProductRepository productRepository;
+    private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
+    private final PaymentRepository paymentRepository;
+    private static final java.math.BigDecimal COMMISSION_RATE = new java.math.BigDecimal("0.05");
 
     @Override
     @Transactional(readOnly = true)
@@ -54,13 +59,15 @@ public class StatsServiceImpl implements StatsService {
         long total = pending + processing + shipped + delivered + completed + cancelled;
 
         // Revenue (sum from completed orders only) - placeholder: using subtotalAmount + shippingFee - discounts where available
-        BigDecimal totalRevenue = sumRevenueForShop(shopId, null, null, Collections.singleton(OrderStatus.COMPLETED));
+        BigDecimal totalRevenue = sumRevenueForShop(shopId, null, null, Collections.singleton(OrderStatus.COMPLETED))
+                .multiply(java.math.BigDecimal.ONE.subtract(COMMISSION_RATE));
 
         // Today revenue
         LocalDate today = LocalDate.now();
-        OffsetDateTime start = today.atStartOfDay().atOffset(OffsetDateTime.now().getOffset());
-        OffsetDateTime end = start.plusDays(1);
-        BigDecimal todayRevenue = sumRevenueForShop(shopId, start, end, Collections.singleton(OrderStatus.COMPLETED));
+        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+        BigDecimal todayRevenue = sumRevenueForShop(shopId, start, end, Collections.singleton(OrderStatus.COMPLETED))
+                .multiply(java.math.BigDecimal.ONE.subtract(COMMISSION_RATE));
 
         return SellerStatsOverviewResponse.builder()
                 .shopId(shopId)
@@ -86,8 +93,8 @@ public class StatsServiceImpl implements StatsService {
         int days = parseRangeDays(range);
         LocalDate today = LocalDate.now();
         LocalDate startDate = today.minusDays(days - 1);
-        OffsetDateTime start = startDate.atStartOfDay().atOffset(OffsetDateTime.now().getOffset());
-        OffsetDateTime end = today.plusDays(1).atStartOfDay().atOffset(OffsetDateTime.now().getOffset());
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
 
         List<Order> orders = orderRepository.findByShopIdAndCreatedAtBetweenAndOrderStatusIn(
                 shop.getId(), start, end, Collections.singletonList(OrderStatus.COMPLETED));
@@ -101,9 +108,108 @@ public class StatsServiceImpl implements StatsService {
             BigDecimal revenue = dayOrders.stream()
                     .map(this::calculateOrderRevenue)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            series.add(new SalesSeriesPoint(date, (long) dayOrders.size(), revenue));
+            series.add(new SalesSeriesPoint(date, (long) dayOrders.size(),
+                    revenue.multiply(java.math.BigDecimal.ONE.subtract(COMMISSION_RATE))));
         }
         return series;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TopProductStat> getSellerTopProducts(CustomUserDetails sellerDetails, String sortBy, Integer limit) {
+        Shop shop = shopRepository.findByUser(sellerDetails.getUser())
+                .orElseThrow(() -> new ResourceNotFoundException("Seller has no shop"));
+
+        List<Object[]> rows = "revenue".equalsIgnoreCase(sortBy)
+                ? productRepository.findTopProductsByRevenueForShop(shop.getId())
+                : productRepository.findTopProductsByQuantityForShop(shop.getId());
+
+        return rows.stream()
+                .limit(limit == null ? 10 : limit)
+                .map(r -> new TopProductStat(
+                        ((Number) r[0]).longValue(),
+                        (String) r[1],
+                        ((Number) r[2]).longValue(),
+                        (BigDecimal) r[3]
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LowStockItem> getSellerLowStock(CustomUserDetails sellerDetails, Integer threshold) {
+        Shop shop = shopRepository.findByUser(sellerDetails.getUser())
+                .orElseThrow(() -> new ResourceNotFoundException("Seller has no shop"));
+
+        List<Object[]> rows = productVariantRepository.findLowStockVariantsByShop(shop.getId(), threshold == null ? 5 : threshold);
+        return rows.stream()
+                .map(r -> new LowStockItem(
+                        ((Number) r[0]).longValue(),
+                        (String) r[1],
+                        (String) r[2],
+                        ((Number) r[3]).intValue()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BreakdownEntry> getSellerPaymentBreakdown(CustomUserDetails sellerDetails, String range) {
+        // Payment is stored at master order level; here we return system-wide breakdown as placeholder.
+        int days = parseRangeDays(range);
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.minusDays(days - 1).atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+        List<Object[]> rows = paymentRepository.breakdownByMethodAll(start, end);
+        return rows.stream().map(r -> new BreakdownEntry((String) r[0], ((Number) r[1]).longValue(), (BigDecimal) r[2]))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BigDecimal getSellerAvgOrderValue(CustomUserDetails sellerDetails, String range) {
+        Shop shop = shopRepository.findByUser(sellerDetails.getUser())
+                .orElseThrow(() -> new ResourceNotFoundException("Seller has no shop"));
+        int days = parseRangeDays(range);
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.minusDays(days - 1).atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+        return orderRepository.avgOrderValueForShop(shop.getId(), start, end)
+                .multiply(java.math.BigDecimal.ONE.subtract(COMMISSION_RATE));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Long getSellerReturnsCount(CustomUserDetails sellerDetails, String range) {
+        Shop shop = shopRepository.findByUser(sellerDetails.getUser())
+                .orElseThrow(() -> new ResourceNotFoundException("Seller has no shop"));
+        int days = parseRangeDays(range);
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.minusDays(days - 1).atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+        return orderRepository.countReturnsForShop(shop.getId(), start, end);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<BreakdownEntry> getAdminPaymentBreakdown(String range) {
+        int days = parseRangeDays(range);
+        LocalDate today = LocalDate.now();
+        LocalDateTime start = today.minusDays(days - 1).atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
+        List<Object[]> rows = paymentRepository.breakdownByMethodAll(start, end);
+        return rows.stream().map(r -> new BreakdownEntry((String) r[0], ((Number) r[1]).longValue(), (BigDecimal) r[2]))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TopShopStat> getAdminTopShops(Integer limit) {
+        List<Object[]> rows = shopRepository.findTopShopsByRevenue();
+        return rows.stream()
+                .limit(limit == null ? 10 : limit)
+                .map(r -> new TopShopStat(((Number) r[0]).longValue(), (String) r[1], (BigDecimal) r[2]))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -122,12 +228,14 @@ public class StatsServiceImpl implements StatsService {
 
         long total = pending + processing + shipped + delivered + completed + cancelled;
 
-        // Revenue
-        BigDecimal totalRevenue = sumRevenueForAll(null, null, Collections.singleton(OrderStatus.COMPLETED));
+        // Platform revenue = 5% commission of GMV from completed orders
+        BigDecimal totalRevenue = sumRevenueForAll(null, null, Collections.singleton(OrderStatus.COMPLETED))
+                .multiply(COMMISSION_RATE);
         LocalDate today = LocalDate.now();
-        OffsetDateTime start = today.atStartOfDay().atOffset(OffsetDateTime.now().getOffset());
-        OffsetDateTime end = start.plusDays(1);
-        BigDecimal todayRevenue = sumRevenueForAll(start, end, Collections.singleton(OrderStatus.COMPLETED));
+        LocalDateTime start = today.atStartOfDay();
+        LocalDateTime end = start.plusDays(1);
+        BigDecimal todayRevenue = sumRevenueForAll(start, end, Collections.singleton(OrderStatus.COMPLETED))
+                .multiply(COMMISSION_RATE);
 
         // Other totals (placeholders using repos)
         long totalUsers = userRepository.count();
@@ -156,8 +264,8 @@ public class StatsServiceImpl implements StatsService {
         int days = parseRangeDays(range);
         LocalDate today = LocalDate.now();
         LocalDate startDate = today.minusDays(days - 1);
-        OffsetDateTime start = startDate.atStartOfDay().atOffset(OffsetDateTime.now().getOffset());
-        OffsetDateTime end = today.plusDays(1).atStartOfDay().atOffset(OffsetDateTime.now().getOffset());
+        LocalDateTime start = startDate.atStartOfDay();
+        LocalDateTime end = today.plusDays(1).atStartOfDay();
 
         List<Order> orders = orderRepository.findByCreatedAtBetweenAndOrderStatusIn(
                 start, end, Collections.singletonList(OrderStatus.COMPLETED));
@@ -171,7 +279,7 @@ public class StatsServiceImpl implements StatsService {
             BigDecimal revenue = dayOrders.stream()
                     .map(this::calculateOrderRevenue)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            series.add(new SalesSeriesPoint(date, (long) dayOrders.size(), revenue));
+            series.add(new SalesSeriesPoint(date, (long) dayOrders.size(), revenue.multiply(COMMISSION_RATE)));
         }
         return series;
     }
@@ -194,7 +302,7 @@ public class StatsServiceImpl implements StatsService {
         return subtotal.add(shipping).add(tax).subtract(itemDisc).subtract(shipDisc);
     }
 
-    private BigDecimal sumRevenueForShop(Long shopId, OffsetDateTime start, OffsetDateTime end, Collection<OrderStatus> statuses) {
+    private BigDecimal sumRevenueForShop(Long shopId, LocalDateTime start, LocalDateTime end, Collection<OrderStatus> statuses) {
         List<Order> orders;
         if (start != null && end != null) {
             orders = orderRepository.findByShopIdAndCreatedAtBetweenAndOrderStatusIn(shopId, start, end, statuses);
@@ -206,7 +314,7 @@ public class StatsServiceImpl implements StatsService {
         return orders.stream().map(this::calculateOrderRevenue).reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private BigDecimal sumRevenueForAll(OffsetDateTime start, OffsetDateTime end, Collection<OrderStatus> statuses) {
+    private BigDecimal sumRevenueForAll(LocalDateTime start, LocalDateTime end, Collection<OrderStatus> statuses) {
         List<Order> orders;
         if (start != null && end != null) {
             orders = orderRepository.findByCreatedAtBetweenAndOrderStatusIn(start, end, statuses);

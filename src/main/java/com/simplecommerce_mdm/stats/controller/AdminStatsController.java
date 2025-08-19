@@ -3,6 +3,8 @@ package com.simplecommerce_mdm.stats.controller;
 import com.simplecommerce_mdm.common.dto.ApiResponse;
 import com.simplecommerce_mdm.stats.dto.AdminStatsOverviewResponse;
 import com.simplecommerce_mdm.stats.dto.SalesSeriesPoint;
+import com.simplecommerce_mdm.stats.dto.BreakdownEntry;
+import com.simplecommerce_mdm.stats.dto.TopShopStat;
 import com.simplecommerce_mdm.stats.service.StatsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -45,6 +47,30 @@ public class AdminStatsController {
         List<SalesSeriesPoint> data = statsService.getAdminSalesSeries(range);
         return ResponseEntity.ok(ApiResponse.<List<SalesSeriesPoint>>builder()
                 .message("Admin sales series retrieved successfully")
+                .data(data)
+                .build());
+    }
+
+    @GetMapping("/payment-breakdown")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get payment breakdown for admin")
+    public ResponseEntity<ApiResponse<List<BreakdownEntry>>> getPaymentBreakdown(
+            @RequestParam(defaultValue = "30d") String range) {
+        List<BreakdownEntry> data = statsService.getAdminPaymentBreakdown(range);
+        return ResponseEntity.ok(ApiResponse.<List<BreakdownEntry>>builder()
+                .message("Admin payment breakdown retrieved successfully")
+                .data(data)
+                .build());
+    }
+
+    @GetMapping("/top-shops")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Get top shops by revenue")
+    public ResponseEntity<ApiResponse<List<TopShopStat>>> getTopShops(
+            @RequestParam(defaultValue = "10") Integer limit) {
+        List<TopShopStat> data = statsService.getAdminTopShops(limit);
+        return ResponseEntity.ok(ApiResponse.<List<TopShopStat>>builder()
+                .message("Admin top shops retrieved successfully")
                 .data(data)
                 .build());
     }

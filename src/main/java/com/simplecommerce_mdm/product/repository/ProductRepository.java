@@ -173,4 +173,17 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // Debug method to check products directly
     @Query("SELECT p.id, p.name, p.status, p.basePrice FROM Product p WHERE p.status = 'APPROVED'")
     List<Object[]> findApprovedProductsWithPrices();
+
+    // Stats: Top products by quantity/revenue for a shop
+    @Query("SELECT oi.variant.product.id AS productId, oi.variant.product.name AS productName, " +
+           "SUM(oi.quantity) AS totalQuantity, SUM(oi.subtotal) AS totalRevenue " +
+           "FROM OrderItem oi WHERE oi.order.shop.id = :shopId AND oi.order.orderStatus = 'COMPLETED' " +
+           "GROUP BY oi.variant.product.id, oi.variant.product.name ORDER BY totalQuantity DESC")
+    List<Object[]> findTopProductsByQuantityForShop(@Param("shopId") Long shopId);
+
+    @Query("SELECT oi.variant.product.id AS productId, oi.variant.product.name AS productName, " +
+           "SUM(oi.quantity) AS totalQuantity, SUM(oi.subtotal) AS totalRevenue " +
+           "FROM OrderItem oi WHERE oi.order.shop.id = :shopId AND oi.order.orderStatus = 'COMPLETED' " +
+           "GROUP BY oi.variant.product.id, oi.variant.product.name ORDER BY totalRevenue DESC")
+    List<Object[]> findTopProductsByRevenueForShop(@Param("shopId") Long shopId);
 } 
