@@ -400,14 +400,63 @@ public class OrderServiceImpl implements OrderService {
     }
     
     private void updateInventoryForOrder(List<CartItem> cartItems) {
-        // This would integrate with inventory management system
-        // For now, we'll assume stock is managed elsewhere
-        log.info("Inventory updated for order items");
+        // Decrease stock for each variant in the cart
+        for (CartItem cartItem : cartItems) {
+            Long variantId = cartItem.getVariant().getId();
+            int qty = cartItem.getQuantity();
+
+            int attempts = 0;
+            boolean updated = false;
+            while (attempts < 3 && !updated) {
+                attempts++;
+                ProductVariant variant = productVariantRepository.findById(variantId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Variant not found: " + variantId));
+                int current = variant.getStockQuantity() != null ? variant.getStockQuantity() : 0;
+                if (current < qty) {
+                    throw new InvalidDataException("Insufficient stock for " + variant.getSku());
+                }
+                variant.setStockQuantity(current - qty);
+                try {
+                    productVariantRepository.save(variant);
+                    updated = true;
+                    log.info("Decreased stock for variant {} by {}. New stock: {}", variant.getId(), qty, variant.getStockQuantity());
+                } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+                    log.warn("Optimistic lock conflict on variant {} attempt {}/3", variantId, attempts);
+                }
+            }
+            if (!updated) {
+                throw new InvalidDataException("Could not update stock due to concurrent updates. Please try again.");
+            }
+        }
     }
     
     private void restoreInventoryForOrder(Order order) {
-        // This would restore inventory when order is cancelled
-        log.info("Inventory restored for cancelled order: {}", order.getId());
+        // Increase stock back for each order item when order is cancelled
+        List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+        for (OrderItem item : items) {
+            Long variantId = item.getVariant().getId();
+            int qty = item.getQuantity();
+
+            int attempts = 0;
+            boolean updated = false;
+            while (attempts < 3 && !updated) {
+                attempts++;
+                ProductVariant variant = productVariantRepository.findById(variantId)
+                        .orElseThrow(() -> new ResourceNotFoundException("Variant not found: " + variantId));
+                int current = variant.getStockQuantity() != null ? variant.getStockQuantity() : 0;
+                variant.setStockQuantity(current + qty);
+                try {
+                    productVariantRepository.save(variant);
+                    updated = true;
+                    log.info("Restored stock for variant {} by {}. New stock: {}", variant.getId(), qty, variant.getStockQuantity());
+                } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
+                    log.warn("Optimistic lock conflict on variant {} attempt {}/3", variantId, attempts);
+                }
+            }
+            if (!updated) {
+                throw new InvalidDataException("Could not restore stock due to concurrent updates. Please try again.");
+            }
+        }
     }
     
     private void clearUserCart(Long userId) {

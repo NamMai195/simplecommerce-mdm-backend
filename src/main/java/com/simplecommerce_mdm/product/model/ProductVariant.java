@@ -63,6 +63,10 @@ public class ProductVariant extends BaseEntity {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Version
+    @Column(name = "version")
+    private Long version;
+
     @OneToMany(mappedBy = "variant", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @Builder.Default
     private Set<InventoryTransaction> inventoryTransactions = new HashSet<>();
