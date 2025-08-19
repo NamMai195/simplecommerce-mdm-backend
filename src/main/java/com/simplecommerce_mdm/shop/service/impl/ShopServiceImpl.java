@@ -12,6 +12,7 @@ import com.simplecommerce_mdm.user.model.Address;
 import com.simplecommerce_mdm.user.repository.RoleRepository;
 import com.simplecommerce_mdm.user.repository.UserRepository;
 import com.simplecommerce_mdm.user.repository.AddressRepository;
+import com.simplecommerce_mdm.cloudinary.service.CloudinaryService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -22,6 +23,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
@@ -40,6 +42,7 @@ public class ShopServiceImpl implements ShopService {
     private final RoleRepository roleRepository;
     private final AddressRepository addressRepository;
     private final ModelMapper modelMapper;
+    private final CloudinaryService cloudinaryService;
 
     @Override
     @Transactional
@@ -330,6 +333,69 @@ public class ShopServiceImpl implements ShopService {
         return convertToShopResponse(shop);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ShopResponse getShopByIdPublic(Long shopId) {
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new ResourceNotFoundException("Shop not found with id: " + shopId));
+
+        if (!Boolean.TRUE.equals(shop.getIsActive()) || shop.getApprovedAt() == null) {
+            throw new ResourceNotFoundException("Shop not found with id: " + shopId);
+        }
+
+        return convertToShopResponse(shop);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ShopProfileResponse getShopProfile(Long shopId) {
+        Shop shop = shopRepository.findById(shopId)
+                .orElseThrow(() -> new ResourceNotFoundException("Shop not found with id: " + shopId));
+
+        if (!Boolean.TRUE.equals(shop.getIsActive()) || shop.getApprovedAt() == null) {
+            throw new ResourceNotFoundException("Shop not found with id: " + shopId);
+        }
+
+        ShopProfileResponse profile = new ShopProfileResponse();
+        profile.setId(shop.getId());
+        profile.setName(shop.getName());
+        profile.setSlug(shop.getSlug());
+        profile.setDescription(shop.getDescription());
+        profile.setLogoUrl(cloudinaryService.getImageUrl(shop.getLogoCloudinaryPublicId()));
+        profile.setCoverImageUrl(cloudinaryService.getImageUrl(shop.getCoverImageCloudinaryPublicId()));
+        profile.setRating(shop.getRating());
+        profile.setTotalProducts(shopRepository.countProductsByShopId(shop.getId()));
+        return profile;
+    }
+
+    @Override
+    @Transactional
+    public ShopResponse updateShopLogo(MultipartFile logoFile, CustomUserDetails userDetails) {
+        User user = userDetails.getUser();
+        Shop shop = shopRepository.findByUser(user)
+                .orElseThrow(() -> new ResourceNotFoundException("User has no shop"));
+
+        CloudinaryService.UploadResult upload = cloudinaryService.uploadBanner(logoFile);
+        shop.setLogoCloudinaryPublicId(upload.publicId());
+        shop = shopRepository.save(shop);
+
+        return convertToShopResponse(shop);
+    }
+
+    @Override
+    @Transactional
+    public ShopResponse updateShopCover(MultipartFile coverFile, CustomUserDetails userDetails) {
+        User user = userDetails.getUser();
+        Shop shop = shopRepository.findByUser(user)
+                .orElseThrow(() -> new ResourceNotFoundException("User has no shop"));
+
+        CloudinaryService.UploadResult upload = cloudinaryService.uploadBanner(coverFile);
+        shop.setCoverImageCloudinaryPublicId(upload.publicId());
+        shop = shopRepository.save(shop);
+
+        return convertToShopResponse(shop);
+    }
+
     private Boolean parseStatus(String status) {
         if (status == null || status.trim().isEmpty()) {
             return null;
@@ -354,6 +420,10 @@ public class ShopServiceImpl implements ShopService {
             response.setCountry(shop.getAddress().getCountryCode());
         }
         
+        // Map logo/cover URLs from Cloudinary public IDs
+        response.setLogoUrl(cloudinaryService.getImageUrl(shop.getLogoCloudinaryPublicId()));
+        response.setCoverImageUrl(cloudinaryService.getImageUrl(shop.getCoverImageCloudinaryPublicId()));
+
         // Set product count
         response.setTotalProducts(shopRepository.countProductsByShopId(shop.getId()));
         
