@@ -3,6 +3,7 @@ package com.simplecommerce_mdm.shop.service;
 import com.simplecommerce_mdm.config.CustomUserDetails;
 import com.simplecommerce_mdm.shop.dto.*;
 import org.springframework.data.domain.Page;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface ShopService {
 
@@ -30,4 +31,14 @@ public interface ShopService {
     ShopResponse getSellerShop(CustomUserDetails sellerDetails);
     
     Object getSellerShopStats(CustomUserDetails sellerDetails);
+
+    // Public shop browsing
+    ShopResponse getShopByIdPublic(Long shopId);
+
+    // Public profile (minimal)
+    ShopProfileResponse getShopProfile(Long shopId);
+
+    // User updates for media
+    ShopResponse updateShopLogo(MultipartFile logoFile, CustomUserDetails userDetails);
+    ShopResponse updateShopCover(MultipartFile coverFile, CustomUserDetails userDetails);
 } 

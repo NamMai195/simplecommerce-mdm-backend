@@ -73,4 +73,4 @@ public class Review extends BaseEntity {
     @Column(name = "not_helpful_votes")
     @Builder.Default
     private Integer notHelpfulVotes = 0;
-} 
+}
