@@ -5,6 +5,8 @@ import com.simplecommerce_mdm.exception.EmailSendingException;
 import com.simplecommerce_mdm.order.model.MasterOrder;
 import com.simplecommerce_mdm.order.model.Order;
 import com.simplecommerce_mdm.order.model.OrderItem;
+import com.simplecommerce_mdm.order.repository.OrderItemRepository;
+import com.simplecommerce_mdm.order.repository.OrderRepository;
 import com.simplecommerce_mdm.user.model.Address;
 import com.simplecommerce_mdm.common.enums.OrderStatus;
 import com.simplecommerce_mdm.cloudinary.service.CloudinaryService;
@@ -45,6 +47,8 @@ public class BrevoEmailService implements EmailService {
     private String senderName;
 
     private final CloudinaryService cloudinaryService;
+    private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private TransactionalEmailsApi apiInstance;
 
     @PostConstruct
@@ -194,12 +198,14 @@ public class BrevoEmailService implements EmailService {
                         : "");
         params.put("shippingPhone", masterOrder.getCustomerPhone() != null ? masterOrder.getCustomerPhone() : "");
 
-        // Order items
+        // Order items - explicitly load to avoid LazyInitialization in async AFTER_COMMIT
         List<Map<String, Object>> orderItems = new ArrayList<>();
-        for (Order order : masterOrder.getOrders()) {
-            for (OrderItem item : order.getOrderItems()) {
+        // Eagerly fetch shop to avoid LazyInitialization in async thread
+        List<Order> orders = orderRepository.findByMasterOrderIdFetchShop(masterOrder.getId());
+        for (Order order : orders) {
+            List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+            for (OrderItem item : items) {
                 Map<String, Object> itemData = new HashMap<>();
-                // Use snapshot data for safety, fallback to variant if available
                 itemData.put("productName", item.getProductNameSnapshot() != null ? item.getProductNameSnapshot()
                         : (item.getVariant() != null ? item.getVariant().getProduct().getName() : "Unknown Product"));
                 itemData.put("variantOptions",
@@ -262,17 +268,20 @@ public class BrevoEmailService implements EmailService {
                         : "");
         params.put("shippingPhone", masterOrder.getCustomerPhone() != null ? masterOrder.getCustomerPhone() : "");
 
-        // Order items
+        // Order items - explicitly load via repository to avoid LazyInitialization
         List<Map<String, Object>> orderItems = new ArrayList<>();
-        for (OrderItem item : order.getOrderItems()) {
+        List<OrderItem> items = orderItemRepository.findByOrderId(order.getId());
+        for (OrderItem item : items) {
             Map<String, Object> itemData = new HashMap<>();
-            itemData.put("productName", item.getVariant().getProduct().getName());
-            itemData.put("sku", item.getVariant().getSku() != null ? item.getVariant().getSku() : "");
+            itemData.put("productName", item.getProductNameSnapshot() != null ? item.getProductNameSnapshot()
+                    : (item.getVariant() != null ? item.getVariant().getProduct().getName() : ""));
+            itemData.put("sku", item.getVariant() != null && item.getVariant().getSku() != null ? item.getVariant().getSku() : "");
             itemData.put("variantOptions",
-                    item.getVariant().getOptions() != null ? item.getVariant().getOptions() : "");
+                    item.getVariantOptionsSnapshot() != null ? item.getVariantOptionsSnapshot()
+                            : (item.getVariant() != null && item.getVariant().getOptions() != null ? item.getVariant().getOptions() : ""));
             itemData.put("quantity", item.getQuantity().toString());
             itemData.put("unitPrice", formatCurrency(item.getUnitPrice()));
-            itemData.put("imageUrl", getProductImageUrl(item.getVariant()));
+            itemData.put("imageUrl", getProductImageUrlSafe(item));
             orderItems.add(itemData);
         }
         params.put("orderItems", orderItems);
