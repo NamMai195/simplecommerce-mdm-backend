@@ -2,11 +2,13 @@ package com.simplecommerce_mdm.user.controller;
 
 import com.simplecommerce_mdm.common.dto.ApiResponse;
 import com.simplecommerce_mdm.user.dto.AddressResponse;
+import com.simplecommerce_mdm.user.dto.AdminAddressResponse;
+import com.simplecommerce_mdm.user.dto.AdminAddressSearchRequest;
+import com.simplecommerce_mdm.user.dto.AdminAddressDeleteRequest;
 import com.simplecommerce_mdm.user.service.AddressService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,17 +26,16 @@ public class AddressAdminController {
     private final AddressService addressService;
 
     /**
-     * Get all addresses (admin only)
+     * Get all addresses with pagination and filtering (admin only)
      */
     @GetMapping
-    public ResponseEntity<ApiResponse<List<AddressResponse>>> getAllAddresses() {
-        log.info("Admin getting all addresses");
+    public ResponseEntity<ApiResponse<Page<AdminAddressResponse>>> getAllAddresses(
+            @ModelAttribute AdminAddressSearchRequest searchRequest) {
+        log.info("Admin getting all addresses with filters: {}", searchRequest);
         
-        // TODO: Implement pagination and filtering for admin
-        // For now, return empty list - will be implemented later
-        List<AddressResponse> addresses = List.of();
+        Page<AdminAddressResponse> addresses = addressService.getAllAddressesForAdmin(searchRequest);
         
-        return ResponseEntity.ok(ApiResponse.<List<AddressResponse>>builder()
+        return ResponseEntity.ok(ApiResponse.<Page<AdminAddressResponse>>builder()
                 .statusCode(HttpStatus.OK.value())
                 .message("All addresses retrieved successfully")
                 .data(addresses)
@@ -45,12 +46,12 @@ public class AddressAdminController {
      * Get addresses by user ID (admin only)
      */
     @GetMapping("/user/{userId}")
-    public ResponseEntity<ApiResponse<List<AddressResponse>>> getAddressesByUserId(@PathVariable Long userId) {
+    public ResponseEntity<ApiResponse<List<AdminAddressResponse>>> getAddressesByUserId(@PathVariable Long userId) {
         log.info("Admin getting addresses for user: {}", userId);
         
-        List<AddressResponse> addresses = addressService.getUserAddresses(userId);
+        List<AdminAddressResponse> addresses = addressService.getAddressesByUserIdForAdmin(userId);
         
-        return ResponseEntity.ok(ApiResponse.<List<AddressResponse>>builder()
+        return ResponseEntity.ok(ApiResponse.<List<AdminAddressResponse>>builder()
                 .statusCode(HttpStatus.OK.value())
                 .message("User addresses retrieved successfully")
                 .data(addresses)
@@ -61,33 +62,36 @@ public class AddressAdminController {
      * Get address by ID (admin only)
      */
     @GetMapping("/{addressId}")
-    public ResponseEntity<ApiResponse<AddressResponse>> getAddressById(@PathVariable Long addressId) {
+    public ResponseEntity<ApiResponse<AdminAddressResponse>> getAddressById(@PathVariable Long addressId) {
         log.info("Admin getting address: {}", addressId);
         
-        // TODO: Implement admin address retrieval
-        // For now, return error - will be implemented later
+        AdminAddressResponse address = addressService.getAddressByIdForAdmin(addressId);
         
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(ApiResponse.<AddressResponse>builder()
-                        .statusCode(HttpStatus.NOT_IMPLEMENTED.value())
-                        .message("Admin address retrieval not implemented yet")
-                        .build());
+        return ResponseEntity.ok(ApiResponse.<AdminAddressResponse>builder()
+                .statusCode(HttpStatus.OK.value())
+                .message("Address retrieved successfully")
+                .data(address)
+                .build());
     }
 
     /**
      * Delete address by ID (admin only)
      */
     @DeleteMapping("/{addressId}")
-    public ResponseEntity<ApiResponse<Void>> deleteAddress(@PathVariable Long addressId) {
-        log.info("Admin deleting address: {}", addressId);
+    public ResponseEntity<ApiResponse<Void>> deleteAddress(
+            @PathVariable Long addressId,
+            @RequestBody(required = false) AdminAddressDeleteRequest deleteRequest) {
         
-        // TODO: Implement admin address deletion
-        // For now, return error - will be implemented later
+        String reason = deleteRequest != null ? deleteRequest.getReason() : "Admin deletion";
+        Long adminId = deleteRequest != null ? deleteRequest.getAdminId() : null;
         
-        return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
-                .body(ApiResponse.<Void>builder()
-                        .statusCode(HttpStatus.NOT_IMPLEMENTED.value())
-                        .message("Admin address deletion not implemented yet")
-                        .build());
+        log.info("Admin {} deleting address: {} with reason: {}", adminId, addressId, reason);
+        
+        addressService.deleteAddressForAdmin(addressId, adminId, reason);
+        
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .statusCode(HttpStatus.OK.value())
+                .message("Address deleted successfully")
+                .build());
     }
 }

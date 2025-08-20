@@ -3,6 +3,8 @@ package com.simplecommerce_mdm.user.service;
 import com.simplecommerce_mdm.user.dto.AddressCreateRequest;
 import com.simplecommerce_mdm.user.dto.AddressResponse;
 import com.simplecommerce_mdm.user.dto.AddressUpdateRequest;
+import com.simplecommerce_mdm.user.dto.AdminAddressResponse;
+import com.simplecommerce_mdm.user.dto.AdminAddressSearchRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -59,4 +61,26 @@ public interface AddressService {
      * Validate address exists and belongs to user
      */
     boolean validateAddressOwnership(Long addressId, Long userId);
+
+    // Admin methods
+
+    /**
+     * Get all addresses with pagination and filtering (admin only)
+     */
+    Page<AdminAddressResponse> getAllAddressesForAdmin(AdminAddressSearchRequest searchRequest);
+
+    /**
+     * Get address by ID for admin (no user validation)
+     */
+    AdminAddressResponse getAddressByIdForAdmin(Long addressId);
+
+    /**
+     * Delete address by ID for admin (no user validation)
+     */
+    void deleteAddressForAdmin(Long addressId, Long adminId, String reason);
+
+    /**
+     * Get addresses by user ID for admin
+     */
+    List<AdminAddressResponse> getAddressesByUserIdForAdmin(Long userId);
 }

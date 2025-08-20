@@ -5,6 +5,8 @@ import com.simplecommerce_mdm.exception.InvalidDataException;
 import com.simplecommerce_mdm.user.dto.AddressCreateRequest;
 import com.simplecommerce_mdm.user.dto.AddressResponse;
 import com.simplecommerce_mdm.user.dto.AddressUpdateRequest;
+import com.simplecommerce_mdm.user.dto.AdminAddressResponse;
+import com.simplecommerce_mdm.user.dto.AdminAddressSearchRequest;
 import com.simplecommerce_mdm.user.model.Address;
 import com.simplecommerce_mdm.user.model.User;
 import com.simplecommerce_mdm.user.model.UserAddress;
@@ -16,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -256,6 +260,139 @@ public class AddressServiceImpl implements AddressService {
     @Transactional(readOnly = true)
     public boolean validateAddressOwnership(Long addressId, Long userId) {
         return userAddressRepository.findByIdAndUserId(addressId, userId).isPresent();
+    }
+
+    // Admin methods
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<AdminAddressResponse> getAllAddressesForAdmin(AdminAddressSearchRequest searchRequest) {
+        log.info("Admin getting all addresses with filters: {}", searchRequest);
+        
+        // Create Pageable object
+        Pageable pageable = org.springframework.data.domain.PageRequest.of(
+            searchRequest.getPage(), 
+            searchRequest.getSize(),
+            org.springframework.data.domain.Sort.by(
+                org.springframework.data.domain.Sort.Direction.fromString(searchRequest.getSortDirection()),
+                searchRequest.getSortBy()
+            )
+        );
+        
+        // Build dynamic query based on filters
+        List<UserAddress> userAddresses = buildFilteredUserAddressQuery(searchRequest);
+        
+        // Convert to Page<AdminAddressResponse>
+        int start = (int) pageable.getOffset();
+        int end = Math.min((start + pageable.getPageSize()), userAddresses.size());
+        
+        List<AdminAddressResponse> pageContent = userAddresses.subList(start, end)
+            .stream()
+            .map(this::mapToAdminAddressResponse)
+            .collect(Collectors.toList());
+        
+        return new org.springframework.data.domain.PageImpl<>(
+            pageContent, 
+            pageable, 
+            userAddresses.size()
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public AdminAddressResponse getAddressByIdForAdmin(Long addressId) {
+        log.info("Admin getting address: {}", addressId);
+        
+        Address address = addressRepository.findById(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
+        
+        // Get UserAddress to get user info
+        UserAddress userAddress = userAddressRepository.findByAddressId(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("UserAddress not found for address: " + addressId));
+        
+        return mapToAdminAddressResponse(userAddress);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAddressForAdmin(Long addressId, Long adminId, String reason) {
+        log.info("Admin {} deleting address: {} with reason: {}", adminId, addressId, reason);
+        
+        UserAddress userAddress = userAddressRepository.findByAddressId(addressId)
+                .orElseThrow(() -> new ResourceNotFoundException("UserAddress not found for address: " + addressId));
+        
+        // Check if this is a default address
+        if (Boolean.TRUE.equals(userAddress.getIsDefaultShipping()) || Boolean.TRUE.equals(userAddress.getIsDefaultBilling())) {
+            throw new InvalidDataException("Cannot delete default address. Please set another address as default first.");
+        }
+        
+        // Soft delete the UserAddress (Address entity remains for potential reuse)
+        userAddressRepository.delete(userAddress);
+        
+        log.info("Address deleted successfully by admin {} with reason: {}", adminId, reason);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AdminAddressResponse> getAddressesByUserIdForAdmin(Long userId) {
+        log.info("Admin getting addresses for user: {}", userId);
+        
+        List<UserAddress> userAddresses = userAddressRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        
+        return userAddresses.stream()
+                .map(this::mapToAdminAddressResponse)
+                .collect(Collectors.toList());
+    }
+
+    private List<UserAddress> buildFilteredUserAddressQuery(AdminAddressSearchRequest searchRequest) {
+        // Get all user addresses with user and address data
+        List<UserAddress> userAddresses = userAddressRepository.findAllUserAddressesWithUserAndAddress();
+        
+        // Apply filters in Java code
+        return userAddresses.stream()
+            .filter(ua -> searchRequest.getUserEmail() == null || 
+                         ua.getUser().getEmail().toLowerCase().contains(searchRequest.getUserEmail().toLowerCase()))
+            .filter(ua -> searchRequest.getContactPhone() == null || 
+                         ua.getContactPhoneNumber().toLowerCase().contains(searchRequest.getContactPhone().toLowerCase()))
+            .filter(ua -> searchRequest.getContactFullName() == null || 
+                         ua.getContactFullName().toLowerCase().contains(searchRequest.getContactFullName().toLowerCase()))
+            .filter(ua -> searchRequest.getCity() == null || 
+                         ua.getAddress().getCity().equalsIgnoreCase(searchRequest.getCity()))
+            .filter(ua -> searchRequest.getDistrict() == null || 
+                         ua.getAddress().getDistrict().equalsIgnoreCase(searchRequest.getDistrict()))
+            .filter(ua -> searchRequest.getCountryCode() == null || 
+                         ua.getAddress().getCountryCode().equalsIgnoreCase(searchRequest.getCountryCode()))
+            .filter(ua -> searchRequest.getStreetAddress() == null || 
+                         ua.getAddress().getStreetAddress1().toLowerCase().contains(searchRequest.getStreetAddress().toLowerCase()))
+            .collect(Collectors.toList());
+    }
+
+    private AdminAddressResponse mapToAdminAddressResponse(UserAddress userAddress) {
+        Address address = userAddress.getAddress();
+        User user = userAddress.getUser();
+        
+        return AdminAddressResponse.builder()
+                .id(userAddress.getId())
+                .userId(user.getId())
+                .userEmail(user.getEmail())
+                .userFullName(user.getFullName())
+                .streetAddress1(address.getStreetAddress1())
+                .streetAddress2(address.getStreetAddress2())
+                .ward(address.getWard())
+                .district(address.getDistrict())
+                .city(address.getCity())
+                .postalCode(address.getPostalCode())
+                .countryCode(address.getCountryCode())
+                .latitude(address.getLatitude())
+                .longitude(address.getLongitude())
+                .contactFullName(userAddress.getContactFullName())
+                .contactPhoneNumber(userAddress.getContactPhoneNumber())
+                .addressType(userAddress.getAddressType())
+                .isDefaultShipping(userAddress.getIsDefaultShipping())
+                .isDefaultBilling(userAddress.getIsDefaultBilling())
+                .createdAt(userAddress.getCreatedAt())
+                .updatedAt(userAddress.getUpdatedAt())
+                .build();
     }
 
     private void resetDefaultShippingAddresses(Long userId) {
