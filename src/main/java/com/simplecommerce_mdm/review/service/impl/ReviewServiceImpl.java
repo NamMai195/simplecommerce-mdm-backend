@@ -4,6 +4,7 @@ import com.simplecommerce_mdm.common.dto.ApiResponse;
 import com.simplecommerce_mdm.exception.InvalidDataException;
 import com.simplecommerce_mdm.exception.ResourceNotFoundException;
 import com.simplecommerce_mdm.order.model.Order;
+import com.simplecommerce_mdm.common.enums.OrderStatus;
 import com.simplecommerce_mdm.order.repository.OrderRepository;
 import com.simplecommerce_mdm.product.model.Product;
 import com.simplecommerce_mdm.product.repository.ProductRepository;
@@ -295,9 +296,10 @@ public class ReviewServiceImpl implements ReviewService {
             throw new InvalidDataException("Order does not contain the specified product");
         }
         
-        // Check if order is completed (delivered)
-        if (order.getOrderStatus().name().equals("DELIVERED")) {
-            throw new InvalidDataException("Cannot review product from an incomplete order");
+        // Check if order is delivered or completed
+        OrderStatus status = order.getOrderStatus();
+        if (!(status == OrderStatus.DELIVERED || status == OrderStatus.COMPLETED)) {
+            throw new InvalidDataException("You can only review delivered or completed orders");
         }
     }
     

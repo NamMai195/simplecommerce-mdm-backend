@@ -165,6 +165,44 @@ public class OrderServiceImpl implements OrderService {
         return buildOrderResponse(order);
     }
 
+    // Admin: get order details by orderId
+    @Override
+    @Transactional(readOnly = true)
+    public OrderResponse getOrderDetailsForAdmin(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        return buildOrderResponse(order);
+    }
+
+    // Seller: get order details, validating ownership by shopId
+    @Override
+    @Transactional(readOnly = true)
+    public OrderResponse getOrderDetailsForSeller(Long shopId, Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (!order.getShop().getId().equals(shopId)) {
+            throw new ResourceNotFoundException("Order not found");
+        }
+        return buildOrderResponse(order);
+    }
+
+    // Admin: list master orders
+    @Override
+    @Transactional(readOnly = true)
+    public Page<MasterOrderResponse> getAllMasterOrdersForAdmin(Pageable pageable) {
+        Page<MasterOrder> mos = masterOrderRepository.findAll(pageable);
+        return mos.map(this::buildMasterOrderResponse);
+    }
+
+    // Admin: get master order details
+    @Override
+    @Transactional(readOnly = true)
+    public MasterOrderResponse getMasterOrderDetailsForAdmin(Long masterOrderId) {
+        MasterOrder mo = masterOrderRepository.findById(masterOrderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Master order not found"));
+        return buildMasterOrderResponse(mo);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public MasterOrderResponse getMasterOrderDetails(Long userId, Long masterOrderId) {
