@@ -378,16 +378,6 @@ public class UserServiceImpl implements UserService {
                     .collect(Collectors.toSet());
             response.setRoles(roleResponses);
         }
-
-        // Add statistics (this could be optimized with separate queries if needed)
-        UserAdminResponse.UserStatistics statistics = UserAdminResponse.UserStatistics.builder()
-                .totalOrders(0L) // TODO: Implement when Order repository is available
-                .totalShops(0L) // TODO: Implement when Shop repository is available
-                .totalProducts(0L) // TODO: Implement when Product repository is available
-                .hasActiveCart(false) // TODO: Implement when Cart repository is available
-                .build();
-        response.setStatistics(statistics);
-
         return response;
     }
 }
