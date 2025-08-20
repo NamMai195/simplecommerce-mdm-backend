@@ -4,6 +4,7 @@ import com.simplecommerce_mdm.common.domain.BaseEntity;
 import com.simplecommerce_mdm.order.model.Order;
 import com.simplecommerce_mdm.product.model.Product;
 import com.simplecommerce_mdm.user.model.User;
+import com.simplecommerce_mdm.product.model.Shop;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -31,6 +32,10 @@ public class Review extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "shop_id", nullable = false)
+    private Shop shop;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id")

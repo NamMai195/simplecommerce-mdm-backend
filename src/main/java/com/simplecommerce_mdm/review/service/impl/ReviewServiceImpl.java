@@ -65,6 +65,7 @@ public class ReviewServiceImpl implements ReviewService {
         Review review = Review.builder()
                 .user(user)
                 .product(product)
+                .shop(product.getShop())
                 .order(order)
                 .rating(request.getRating())
                 .comment(request.getComment())
@@ -241,9 +242,8 @@ public class ReviewServiceImpl implements ReviewService {
     @Override
     @Transactional(readOnly = true)
     public ReviewListResponse getShopProductReviews(Long shopId, Long productId, Pageable pageable) {
-        // Implementation for shop product reviews
-        // This would need additional repository method or custom query
-        throw new UnsupportedOperationException("Not implemented yet");
+        Page<Review> reviewPage = reviewRepository.findByShopIdAndProductId(shopId, productId, pageable);
+        return buildReviewListResponse(reviewPage, null);
     }
     
     @Override
