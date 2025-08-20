@@ -78,4 +78,16 @@ public interface UserAddressRepository extends JpaRepository<UserAddress, Long> 
      * Check if address exists by address entity
      */
     boolean existsByAddress(com.simplecommerce_mdm.user.model.Address address);
+
+    /**
+     * Find UserAddress by address ID (for admin operations)
+     */
+    Optional<UserAddress> findByAddressId(Long addressId);
+
+    // Admin filtering method - single method with dynamic query
+    @Query("SELECT ua FROM UserAddress ua " +
+           "JOIN ua.user u " +
+           "JOIN ua.address a " +
+           "ORDER BY ua.createdAt DESC")
+    List<UserAddress> findAllUserAddressesWithUserAndAddress();
 }
