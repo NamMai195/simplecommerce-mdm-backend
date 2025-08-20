@@ -28,6 +28,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     List<Order> findByMasterOrderIdOrderByCreatedAtDesc(Long masterOrderId);
 
     /**
+     * Find orders by master order with shop eagerly fetched (for email building after commit)
+     */
+    @Query("SELECT o FROM Order o JOIN FETCH o.shop WHERE o.masterOrder.id = :masterOrderId ORDER BY o.createdAt DESC")
+    List<Order> findByMasterOrderIdFetchShop(@Param("masterOrderId") Long masterOrderId);
+
+    /**
      * Find orders by shop for seller
      */
     Page<Order> findByShopIdOrderByCreatedAtDesc(Long shopId, Pageable pageable);
@@ -55,6 +61,12 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
      * Check if order number exists
      */
     boolean existsByOrderNumber(String orderNumber);
+
+    /**
+     * Find single order with shop eagerly fetched
+     */
+    @Query("SELECT o FROM Order o JOIN FETCH o.shop WHERE o.id = :orderId")
+    Optional<Order> findByIdFetchShop(@Param("orderId") Long orderId);
 
     /**
      * Count orders by shop and status
