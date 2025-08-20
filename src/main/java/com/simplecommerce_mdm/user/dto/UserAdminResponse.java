@@ -29,7 +29,6 @@ public class UserAdminResponse {
     private LocalDateTime deletedAt;
     private String metadata;
     private Set<RoleResponse> roles;
-    private UserStatistics statistics;
 
     @Getter
     @Setter
@@ -40,17 +39,5 @@ public class UserAdminResponse {
         private Integer roleId;
         private String roleName;
         private String description;
-    }
-
-    @Getter
-    @Setter
-    @Builder
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class UserStatistics {
-        private Long totalOrders;
-        private Long totalShops;
-        private Long totalProducts;
-        private Boolean hasActiveCart;
     }
 }
