@@ -316,16 +316,27 @@ public class ReviewServiceImpl implements ReviewService {
     }
     
     private ReviewResponse mapToReviewResponse(Review review) {
-        ReviewResponse response = modelMapper.map(review, ReviewResponse.class);
-        response.setUserId(review.getUser().getId());
-        response.setUserName(review.getUser().getFirstName() + " " + review.getUser().getLastName());
-        response.setUserEmail(review.getUser().getEmail());
-        response.setProductId(review.getProduct().getId());
-        response.setProductName(review.getProduct().getName());
-        response.setOrderId(review.getOrder().getId());
-        response.setCreatedAt(review.getCreatedAt());
-        response.setUpdatedAt(review.getUpdatedAt());
-        return response;
+        // Manually map to avoid ModelMapper ambiguity on userName (firstName/lastName/fullName)
+        return ReviewResponse.builder()
+                .id(review.getId())
+                .userId(review.getUser().getId())
+                .userName((review.getUser().getFirstName() != null ? review.getUser().getFirstName() : "")
+                        + (review.getUser().getLastName() != null ? " " + review.getUser().getLastName() : ""))
+                .userEmail(review.getUser().getEmail())
+                .productId(review.getProduct().getId())
+                .productName(review.getProduct().getName())
+                .orderId(review.getOrder().getId())
+                .rating(review.getRating())
+                .comment(review.getComment())
+                .isVerifiedPurchase(review.getIsVerifiedPurchase())
+                .helpfulCount(review.getHelpfulCount())
+                .isReported(review.getIsReported())
+                .reportReason(review.getReportReason())
+                .isApproved(review.getIsApproved())
+                .moderatorNotes(review.getModeratorNotes())
+                .createdAt(review.getCreatedAt())
+                .updatedAt(review.getUpdatedAt())
+                .build();
     }
     
     private ReviewListResponse buildReviewListResponse(Page<Review> reviewPage, Product product) {
