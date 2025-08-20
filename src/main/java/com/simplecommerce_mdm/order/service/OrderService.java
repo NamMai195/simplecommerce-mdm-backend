@@ -66,4 +66,12 @@ public interface OrderService {
      * Get order statistics
      */
     OrderStatisticsResponse getOrderStatistics();
+
+    // Admin/Seller order detail endpoints
+    OrderResponse getOrderDetailsForAdmin(Long orderId);
+    OrderResponse getOrderDetailsForSeller(Long shopId, Long orderId);
+
+    // Admin master order endpoints
+    org.springframework.data.domain.Page<MasterOrderResponse> getAllMasterOrdersForAdmin(org.springframework.data.domain.Pageable pageable);
+    MasterOrderResponse getMasterOrderDetailsForAdmin(Long masterOrderId);
 } 

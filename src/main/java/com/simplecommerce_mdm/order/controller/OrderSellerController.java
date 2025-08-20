@@ -79,6 +79,20 @@ public class OrderSellerController {
                 .build());
     }
 
+    @GetMapping("/{orderId}")
+    @Operation(summary = "Get seller order details", description = "Retrieve order details with items for seller's shop")
+    public ResponseEntity<ApiResponse<OrderResponse>> getSellerOrderDetails(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable Long orderId) {
+        Long shopId = getSellerShopId(userDetails.getUser().getId());
+        OrderResponse order = orderService.getOrderDetailsForSeller(shopId, orderId);
+        return ResponseEntity.ok(ApiResponse.<OrderResponse>builder()
+                .statusCode(200)
+                .message("Seller order details retrieved successfully")
+                .data(order)
+                .build());
+    }
+
     private Long getSellerShopId(Long userId) {
         return shopRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Seller shop not found"))

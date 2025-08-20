@@ -93,4 +93,40 @@ public class OrderAdminController {
                 .data(statistics)
                 .build());
     }
+
+    @GetMapping("/{orderId}")
+    @Operation(summary = "Get order details (Admin)")
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrderDetails(@PathVariable Long orderId) {
+        OrderResponse order = orderService.getOrderDetailsForAdmin(orderId);
+        return ResponseEntity.ok(ApiResponse.<OrderResponse>builder()
+                .statusCode(200)
+                .message("Order details retrieved successfully")
+                .data(order)
+                .build());
+    }
+
+    @GetMapping("/master")
+    @Operation(summary = "Get master orders (Admin)")
+    public ResponseEntity<ApiResponse<Page<MasterOrderResponse>>> getMasterOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<MasterOrderResponse> mos = orderService.getAllMasterOrdersForAdmin(pageable);
+        return ResponseEntity.ok(ApiResponse.<Page<MasterOrderResponse>>builder()
+                .statusCode(200)
+                .message("Master orders retrieved successfully")
+                .data(mos)
+                .build());
+    }
+
+    @GetMapping("/master/{masterOrderId}")
+    @Operation(summary = "Get master order details (Admin)")
+    public ResponseEntity<ApiResponse<MasterOrderResponse>> getMasterOrderDetails(@PathVariable Long masterOrderId) {
+        MasterOrderResponse mo = orderService.getMasterOrderDetailsForAdmin(masterOrderId);
+        return ResponseEntity.ok(ApiResponse.<MasterOrderResponse>builder()
+                .statusCode(200)
+                .message("Master order details retrieved successfully")
+                .data(mo)
+                .build());
+    }
 } 
