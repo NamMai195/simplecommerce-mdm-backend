@@ -78,9 +78,8 @@ public class ReviewSellerController {
         Sort sort = Sort.by(Sort.Direction.fromString(sortDir), sortBy);
         Pageable pageable = PageRequest.of(page, size, sort);
         
-        // For now, use the general product reviews endpoint
-        // In the future, this could be enhanced to only show reviews for products in the seller's shop
-        ReviewListResponse response = reviewService.getProductReviews(productId, pageable);
+        // Only show reviews for products in the current seller's shop
+        ReviewListResponse response = reviewService.getShopProductReviews(shop.getId(), productId, pageable);
         
         ApiResponse<ReviewListResponse> apiResponse = ApiResponse.<ReviewListResponse>builder()
                 .message("Product reviews in shop retrieved successfully")

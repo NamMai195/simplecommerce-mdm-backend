@@ -50,6 +50,10 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     // Tìm reviews theo shop (thông qua product)
     @Query("SELECT r FROM Review r JOIN r.product p WHERE p.shop.id = :shopId AND r.isApproved = true ORDER BY r.createdAt DESC")
     Page<Review> findByShopId(@Param("shopId") Long shopId, Pageable pageable);
+
+    // Tìm reviews theo shop và product (seller xem review của sản phẩm thuộc shop mình)
+    @Query("SELECT r FROM Review r JOIN r.product p WHERE p.shop.id = :shopId AND p.id = :productId AND r.isApproved = true ORDER BY r.createdAt DESC")
+    Page<Review> findByShopIdAndProductId(@Param("shopId") Long shopId, @Param("productId") Long productId, Pageable pageable);
     
     // Đếm reviews theo shop
     @Query("SELECT COUNT(r) FROM Review r JOIN r.product p WHERE p.shop.id = :shopId AND r.isApproved = true")
