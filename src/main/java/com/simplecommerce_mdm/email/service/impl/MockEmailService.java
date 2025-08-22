@@ -56,4 +56,10 @@ public class MockEmailService implements EmailService {
         log.info("[MOCK EMAIL] Sending password reset OTP to {} - user: {}, otp: {}, expire: {}m",
                 to, userName, otpCode, expireMinutes);
     }
+
+    @Override
+    public void sendEmailVerificationOtpEmail(String to, String otpCode, int expireMinutes, String userName) {
+        log.info("[MOCK EMAIL] Sending email verification OTP to {} - user: {}, otp: {}, expire: {}m",
+                to, userName, otpCode, expireMinutes);
+    }
 }

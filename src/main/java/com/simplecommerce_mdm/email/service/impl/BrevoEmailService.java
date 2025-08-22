@@ -166,6 +166,32 @@ public class BrevoEmailService implements EmailService {
         }
     }
 
+    @Override
+    public void sendEmailVerificationOtpEmail(String to, String otpCode, int expireMinutes, String userName) {
+        try {
+            Map<String, Object> params = new HashMap<>();
+            params.put("brandName", "SimpleCommerce MDM");
+            params.put("userName", userName);
+            params.put("otpCode", otpCode);
+            params.put("expireMinutes", expireMinutes);
+            params.put("logoUrl", buildLogoUrl());
+            params.put("supportUrl", buildSupportUrl());
+            params.put("websiteUrl", "https://mdm-store.com");
+            params.put("privacyUrl", "https://mdm-store.com/privacy");
+            params.put("termsUrl", "https://mdm-store.com/terms");
+            params.put("unsubscribeUrl", "https://mdm-store.com/unsubscribe");
+            params.put("facebookUrl", "https://facebook.com/simplecommerce.mdm");
+            params.put("instagramUrl", "https://instagram.com/simplecommerce.mdm");
+            params.put("tiktokUrl", "https://tiktok.com/@simplecommerce.mdm");
+            params.put("currentYear", String.valueOf(java.time.Year.now().getValue()));
+
+            sendEmailWithTemplate(to, EMAIL_VERIFICATION_OTP_TEMPLATE_ID, params);
+            log.info("Email verification OTP email sent to {}", to);
+        } catch (Exception e) {
+            log.error("Failed to send email verification OTP email to {}: {}", to, e.getMessage(), e);
+        }
+    }
+
     // === TEMPLATE PARAMETER BUILDERS ===
 
     private Map<String, Object> buildOrderConfirmationParams(MasterOrder masterOrder) {
@@ -198,7 +224,8 @@ public class BrevoEmailService implements EmailService {
                         : "");
         params.put("shippingPhone", masterOrder.getCustomerPhone() != null ? masterOrder.getCustomerPhone() : "");
 
-        // Order items - explicitly load to avoid LazyInitialization in async AFTER_COMMIT
+        // Order items - explicitly load to avoid LazyInitialization in async
+        // AFTER_COMMIT
         List<Map<String, Object>> orderItems = new ArrayList<>();
         // Eagerly fetch shop to avoid LazyInitialization in async thread
         List<Order> orders = orderRepository.findByMasterOrderIdFetchShop(masterOrder.getId());
@@ -275,10 +302,13 @@ public class BrevoEmailService implements EmailService {
             Map<String, Object> itemData = new HashMap<>();
             itemData.put("productName", item.getProductNameSnapshot() != null ? item.getProductNameSnapshot()
                     : (item.getVariant() != null ? item.getVariant().getProduct().getName() : ""));
-            itemData.put("sku", item.getVariant() != null && item.getVariant().getSku() != null ? item.getVariant().getSku() : "");
+            itemData.put("sku",
+                    item.getVariant() != null && item.getVariant().getSku() != null ? item.getVariant().getSku() : "");
             itemData.put("variantOptions",
                     item.getVariantOptionsSnapshot() != null ? item.getVariantOptionsSnapshot()
-                            : (item.getVariant() != null && item.getVariant().getOptions() != null ? item.getVariant().getOptions() : ""));
+                            : (item.getVariant() != null && item.getVariant().getOptions() != null
+                                    ? item.getVariant().getOptions()
+                                    : ""));
             itemData.put("quantity", item.getQuantity().toString());
             itemData.put("unitPrice", formatCurrency(item.getUnitPrice()));
             itemData.put("imageUrl", getProductImageUrlSafe(item));

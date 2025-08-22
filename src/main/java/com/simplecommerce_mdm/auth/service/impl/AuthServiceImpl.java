@@ -6,6 +6,7 @@ import com.google.api.client.http.javanet.NetHttpTransport;
 import com.google.api.client.json.gson.GsonFactory;
 import com.simplecommerce_mdm.auth.dto.*;
 import com.simplecommerce_mdm.auth.model.PasswordResetToken;
+import com.simplecommerce_mdm.auth.model.EmailVerificationToken;
 import com.simplecommerce_mdm.auth.repository.PasswordResetTokenRepository;
 import com.simplecommerce_mdm.auth.service.AuthService;
 import com.simplecommerce_mdm.auth.service.JwtService;
@@ -17,6 +18,7 @@ import com.simplecommerce_mdm.user.model.Role;
 import com.simplecommerce_mdm.user.model.User;
 import com.simplecommerce_mdm.user.repository.RoleRepository;
 import com.simplecommerce_mdm.user.repository.UserRepository;
+import com.simplecommerce_mdm.auth.repository.EmailVerificationTokenRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -55,9 +57,16 @@ public class AuthServiceImpl implements AuthService {
     @Value("${jwt.password-reset.max-attempts:3}")
     private int maxPasswordResetAttempts;
 
+    @Value("${jwt.email-verification.expiry-minutes:10}")
+    private int emailVerificationExpiryMinutes;
+
+    @Value("${jwt.email-verification.max-attempts:3}")
+    private int maxEmailVerificationAttempts;
+
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final ModelMapper modelMapper;
     private final AuthenticationManager authenticationManager;
@@ -69,7 +78,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public void register(RegisterRequest registerRequest) {
+    public RegisterResponse register(RegisterRequest registerRequest) {
         if (userRepository.findByEmail(registerRequest.getEmail()).isPresent()) {
             throw new IllegalStateException("Email already in use!");
         }
@@ -77,33 +86,47 @@ public class AuthServiceImpl implements AuthService {
         User user = modelMapper.map(registerRequest, User.class);
         user.setPasswordHash(passwordEncoder.encode(registerRequest.getPassword()));
         user.setUuid(UUID.randomUUID());
+        user.setIsActive(false); // User starts as inactive until email is verified
 
         Role userRole = roleRepository.findByRoleName("USER")
                 .orElseThrow(() -> new RuntimeException("Error: Role 'USER' is not found."));
         user.setRoles(new HashSet<>(Collections.singletonList(userRole)));
 
-        userRepository.save(user);
+        user = userRepository.save(user);
+
+        // Generate and send email verification OTP
+        return generateAndSendEmailVerification(user);
     }
 
     @Override
     public TokenResponse login(LoginRequest loginrequest) {
         logger.info("Login request for email: {}", loginrequest.getEmail());
 
+        // Check if user exists and is active before authentication
+        User user = userRepository.findByEmail(loginrequest.getEmail())
+                .orElseThrow(() -> new InvalidDataException("Invalid email or password"));
+
+        if (!user.getIsActive()) {
+            throw new InvalidDataException("Account disabled");
+        }
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(loginrequest.getEmail(), loginrequest.getPassword()));
 
         CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
-        User user = customUserDetails.getUser();
+        User authenticatedUser = customUserDetails.getUser();
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
 
-        logger.info("User authenticated successfully: {}", user.getFullName());
-        logger.info("User ID: {}", user.getId());
+        logger.info("User authenticated successfully: {}", authenticatedUser.getFullName());
+        logger.info("User ID: {}", authenticatedUser.getId());
 
-        user.setLastLoginAt(LocalDateTime.now());
-        userRepository.save(user);
+        authenticatedUser.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(authenticatedUser);
 
-        String accessToken = jwtService.generateAccessToken(user.getId(), user.getEmail(), authorities);
-        String refreshToken = jwtService.generateRefreshToken(user.getId(), user.getEmail(), authorities);
+        String accessToken = jwtService.generateAccessToken(authenticatedUser.getId(), authenticatedUser.getEmail(),
+                authorities);
+        String refreshToken = jwtService.generateRefreshToken(authenticatedUser.getId(), authenticatedUser.getEmail(),
+                authorities);
 
         return TokenResponse.builder()
                 .accessToken(accessToken)
@@ -282,6 +305,47 @@ public class AuthServiceImpl implements AuthService {
         logger.info("Password changed successfully for user: {}", request.getEmail());
     }
 
+    @Override
+    @Transactional
+    public void verifyEmail(EmailVerificationRequest request) {
+        logger.info("Email verification request for email: {}", request.getEmail());
+
+        // Check if user exists
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + request.getEmail()));
+
+        // Check if user is already verified
+        if (user.getIsActive()) {
+            throw new InvalidDataException("Email is already verified");
+        }
+
+        // Find valid token by OTP code and email
+        LocalDateTime now = LocalDateTime.now();
+        EmailVerificationToken token = emailVerificationTokenRepository.findByOtpCodeAndEmail(
+                request.getOtpCode(),
+                request.getEmail(),
+                now).orElseThrow(() -> new InvalidDataException("Invalid or expired OTP code"));
+
+        // Check if token is valid
+        if (!token.isValid()) {
+            throw new InvalidDataException("OTP code has expired or already been used");
+        }
+
+        // Activate user account
+        user.setIsActive(true);
+        user.setEmailVerifiedAt(now);
+        userRepository.save(user);
+
+        // Mark token as used
+        token.markAsUsed();
+        emailVerificationTokenRepository.save(token);
+
+        // Invalidate all other tokens for this email
+        emailVerificationTokenRepository.invalidateAllTokensForEmail(request.getEmail(), now);
+
+        logger.info("Email verified successfully for user: {}", request.getEmail());
+    }
+
     private User createNewUserFromGoogle(GoogleIdToken.Payload payload) {
         logger.info("User with email {} not found. Creating new user.", payload.getEmail());
         User newUser = new User();
@@ -307,6 +371,67 @@ public class AuthServiceImpl implements AuthService {
      */
     private String generateOtpCode() {
         return String.format("%06d", (int) (Math.random() * 1000000));
+    }
+
+    /**
+     * Generate and send email verification OTP
+     */
+    private RegisterResponse generateAndSendEmailVerification(User user) {
+        LocalDateTime now = LocalDateTime.now();
+
+        // Check for existing active tokens
+        long activeTokens = emailVerificationTokenRepository.countActiveTokensForEmail(user.getEmail(), now);
+
+        if (activeTokens >= maxEmailVerificationAttempts) {
+            throw new InvalidDataException(
+                    "Too many verification attempts. Please wait before requesting another verification.");
+        }
+
+        // Invalidate any existing tokens for this email
+        emailVerificationTokenRepository.invalidateAllTokensForEmail(user.getEmail(), now);
+
+        // Generate OTP code (6 digits)
+        String otpCode = generateOtpCode();
+
+        // Generate unique token
+        String token = UUID.randomUUID().toString();
+
+        // Set expiration time
+        LocalDateTime expiresAt = now.plusMinutes(emailVerificationExpiryMinutes);
+
+        // Create email verification token
+        EmailVerificationToken emailVerificationToken = EmailVerificationToken.builder()
+                .token(token)
+                .userEmail(user.getEmail())
+                .user(user)
+                .otpCode(otpCode)
+                .expiresAt(expiresAt)
+                .ipAddress(getClientIpAddress())
+                .userAgent(getUserAgent())
+                .build();
+
+        emailVerificationTokenRepository.save(emailVerificationToken);
+
+        // Send OTP email
+        try {
+            emailService.sendEmailVerificationOtpEmail(
+                    user.getEmail(),
+                    otpCode,
+                    emailVerificationExpiryMinutes,
+                    user.getFullName());
+            logger.info("Email verification OTP sent to email: {}", user.getEmail());
+        } catch (Exception e) {
+            logger.error("Failed to send email verification OTP email: {}", e.getMessage(), e);
+            throw new InvalidDataException("Failed to send verification OTP email. Please try again later.");
+        }
+
+        return RegisterResponse.builder()
+                .email(user.getEmail())
+                .message("Registration successful. Please check your email for verification OTP.")
+                .expiresAt(expiresAt)
+                .expiresInMinutes(emailVerificationExpiryMinutes)
+                .userUuid(user.getUuid().toString())
+                .build();
     }
 
     /**
