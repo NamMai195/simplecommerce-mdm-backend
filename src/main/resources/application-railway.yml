@@ -1,8 +1,8 @@
 spring:
   datasource:
-    url: ${DATABASE_URL}
-    username: ${DATABASE_USERNAME}
-    password: ${DATABASE_PASSWORD}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
     hikari:
       # Tối ưu cho free tier (0.5GB RAM)
@@ -30,10 +30,6 @@ spring:
         jdbc.batch_versioned_data: true
         jdbc.batch.builder: legacy
 
-  # Tối ưu JVM memory
-  jvm:
-    memory: -Xmx256m -Xms128m
-
 server:
   port: ${PORT:8080}
   forward-headers-strategy: native
@@ -57,8 +53,7 @@ management:
     health:
       show-details: when-authorized
 
-# Tối ưu cho free tier
-spring:
+  # Tối ưu cho free tier
   task:
     execution:
       pool:
