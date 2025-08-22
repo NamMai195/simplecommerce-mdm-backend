@@ -21,15 +21,18 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @Operation(summary = "Register User", description = "API register new user ")
+    @Operation(summary = "Register User", description = "API register new user with email verification required")
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<Void>> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
-        authService.register(registerRequest);
-        ApiResponse<Void> response = ApiResponse.<Void>builder()
+    public ResponseEntity<ApiResponse<RegisterResponse>> registerUser(
+            @Valid @RequestBody RegisterRequest registerRequest) {
+        log.info("Registration request for email: {}", registerRequest.getEmail());
+        RegisterResponse response = authService.register(registerRequest);
+        ApiResponse<RegisterResponse> apiResponse = ApiResponse.<RegisterResponse>builder()
                 .statusCode(HttpStatus.CREATED.value())
-                .message("User registered successfully!")
+                .message("User registered successfully! Please check your email for verification OTP.")
+                .data(response)
                 .build();
-        return new ResponseEntity<>(response, HttpStatus.CREATED);
+        return new ResponseEntity<>(apiResponse, HttpStatus.CREATED);
     }
 
     @Operation(summary = "Login User", description = "API login user ")
@@ -87,6 +90,17 @@ public class AuthController {
         authService.changePassword(request);
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .message("Password changed successfully")
+                .build();
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Verify Email", description = "Verify user email using OTP code")
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody EmailVerificationRequest request) {
+        log.info("Email verification request for email: {}", request.getEmail());
+        authService.verifyEmail(request);
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message("Email verified successfully")
                 .build();
         return ResponseEntity.ok(response);
     }

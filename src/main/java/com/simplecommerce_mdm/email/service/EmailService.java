@@ -28,7 +28,8 @@ public interface EmailService {
 
     /**
      * Sends order confirmation email to buyer after successful order creation.
-     * Uses Brevo template for order confirmation with order details, items, and tracking info.
+     * Uses Brevo template for order confirmation with order details, items, and
+     * tracking info.
      *
      * @param masterOrder The master order containing all order details
      */
@@ -63,4 +64,14 @@ public interface EmailService {
      * @param userName      recipient display name
      */
     void sendPasswordResetOtpEmail(String to, String otpCode, int expireMinutes, String userName);
+
+    /**
+     * Sends email verification OTP email to user.
+     *
+     * @param to            recipient email
+     * @param otpCode       numeric OTP code
+     * @param expireMinutes validity in minutes
+     * @param userName      recipient display name
+     */
+    void sendEmailVerificationOtpEmail(String to, String otpCode, int expireMinutes, String userName);
 }
