@@ -65,14 +65,12 @@ management:
   session:
     timeout: 30m
 
-# Security configurations
-security:
-  jwt:
-    secret-key: ${JWT_SECRET_KEY}
-    expiration: ${JWT_EXPIRATION:86400000}
-    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
-    accessKey: ${JWT_ACCESS_KEY}
-    refreshKey: ${JWT_REFRESH_KEY}
+# JWT configurations
+jwt:
+  accessKey: ${JWT_SECRET_KEY}
+  refreshKey: ${JWT_REFRESH_SECRET_KEY}
+  expiryMinutes: ${JWT_EXPIRY_MINUTES:60}
+  expiryDay: ${JWT_EXPIRY_DAY:7}
 
 # Brevo Email Service
 brevo:
