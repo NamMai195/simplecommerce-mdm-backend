@@ -392,8 +392,8 @@ public class ProductServiceImpl implements ProductService {
         // Optional: Delete images from Cloudinary (uncomment if needed)
         // cleanupProductImages(product);
 
-        // Soft delete the product (thanks to @SQLDelete annotation)
-        productRepository.delete(product);
+        // Use custom soft delete method to avoid @SQLDelete parameter binding issues
+        productRepository.softDeleteProductByIdAndShop(productId, shop);
         
         log.info("Successfully deleted product: {} (ID: {}) for seller: {}", 
                 product.getName(), productId, seller.getEmail());

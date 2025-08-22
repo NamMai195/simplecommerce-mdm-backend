@@ -7,9 +7,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -173,6 +175,12 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // Debug method to check products directly
     @Query("SELECT p.id, p.name, p.status, p.basePrice FROM Product p WHERE p.status = 'APPROVED'")
     List<Object[]> findApprovedProductsWithPrices();
+
+    // Custom soft delete method to avoid @SQLDelete parameter binding issues
+    @Query("UPDATE Product p SET p.deletedAt = CURRENT_TIMESTAMP WHERE p.id = :id AND p.shop = :shop")
+    @Modifying
+    @Transactional
+    void softDeleteProductByIdAndShop(@Param("id") Long id, @Param("shop") Shop shop);
 
     // Stats: Top products by quantity/revenue for a shop
     @Query("SELECT oi.variant.product.id AS productId, oi.variant.product.name AS productName, " +
