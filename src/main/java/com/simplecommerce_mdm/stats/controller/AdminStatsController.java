@@ -23,54 +23,54 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/admin/stats")
 @RequiredArgsConstructor
-@Tag(name = "Admin Stats", description = "Statistics for admin dashboard")
+@Tag(name = "Admin Stats", description = "API thống kê dành cho trang quản trị admin")
 public class AdminStatsController {
 
     private final StatsService statsService;
 
     @GetMapping("/overview")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get admin overview stats")
+    @Operation(summary = "Lấy tổng quan thống kê admin", description = "Lấy các chỉ số tổng quan của toàn hệ thống bao gồm doanh thu, đơn hàng, người dùng")
     public ResponseEntity<ApiResponse<AdminStatsOverviewResponse>> getOverview() {
         AdminStatsOverviewResponse data = statsService.getAdminOverview();
         return ResponseEntity.ok(ApiResponse.<AdminStatsOverviewResponse>builder()
-                .message("Admin overview retrieved successfully")
+                .message("Lấy tổng quan thống kê admin thành công")
                 .data(data)
                 .build());
     }
 
     @GetMapping("/sales-series")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get admin sales series")
+    @Operation(summary = "Lấy biểu đồ doanh thu admin", description = "Lấy dữ liệu biểu đồ doanh thu theo thời gian cho admin")
     public ResponseEntity<ApiResponse<List<SalesSeriesPoint>>> getSalesSeries(
             @RequestParam(defaultValue = "7d") String range) {
         List<SalesSeriesPoint> data = statsService.getAdminSalesSeries(range);
         return ResponseEntity.ok(ApiResponse.<List<SalesSeriesPoint>>builder()
-                .message("Admin sales series retrieved successfully")
+                .message("Lấy biểu đồ doanh thu admin thành công")
                 .data(data)
                 .build());
     }
 
     @GetMapping("/payment-breakdown")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get payment breakdown for admin")
+    @Operation(summary = "Lấy phân tích phương thức thanh toán", description = "Lấy thống kê phân tích theo các phương thức thanh toán")
     public ResponseEntity<ApiResponse<List<BreakdownEntry>>> getPaymentBreakdown(
             @RequestParam(defaultValue = "30d") String range) {
         List<BreakdownEntry> data = statsService.getAdminPaymentBreakdown(range);
         return ResponseEntity.ok(ApiResponse.<List<BreakdownEntry>>builder()
-                .message("Admin payment breakdown retrieved successfully")
+                .message("Lấy phân tích phương thức thanh toán thành công")
                 .data(data)
                 .build());
     }
 
     @GetMapping("/top-shops")
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Get top shops by revenue")
+    @Operation(summary = "Lấy danh sách shop hàng đầu", description = "Lấy danh sách các shop có doanh thu cao nhất")
     public ResponseEntity<ApiResponse<List<TopShopStat>>> getTopShops(
             @RequestParam(defaultValue = "10") Integer limit) {
         List<TopShopStat> data = statsService.getAdminTopShops(limit);
         return ResponseEntity.ok(ApiResponse.<List<TopShopStat>>builder()
-                .message("Admin top shops retrieved successfully")
+                .message("Lấy danh sách shop hàng đầu thành công")
                 .data(data)
                 .build());
     }
