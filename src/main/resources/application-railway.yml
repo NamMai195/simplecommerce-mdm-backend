@@ -106,3 +106,21 @@ springdoc:
   swagger-ui:
     enabled: true
     path: /swagger-ui.html
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+
+# Additional Security Configuration
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY}
+    expiration: 86400000
+    refresh-expiration: 604800000
