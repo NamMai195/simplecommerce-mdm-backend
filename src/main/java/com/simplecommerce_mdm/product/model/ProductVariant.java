@@ -17,7 +17,7 @@ import java.util.Set;
 @Builder
 @Entity
 @Table(name = "product_variants")
-@SQLDelete(sql = "UPDATE product_variants SET deleted_at = NOW() WHERE id = ?")
+@SQLDelete(sql = "UPDATE product_variants SET deleted_at = NOW() WHERE id = ? AND version = ?")
 @Where(clause = "deleted_at IS NULL")
 public class ProductVariant extends BaseEntity {
 
