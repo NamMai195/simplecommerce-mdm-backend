@@ -1,0 +1,102 @@
+spring:
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # Tối ưu cho free tier (0.5GB RAM)
+      maximum-pool-size: 5
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        use_sql_comments: false
+        jdbc:
+          batch_size: 10
+        order_inserts: true
+        order_updates: true
+        # Tối ưu memory
+        jdbc.batch_versioned_data: true
+        jdbc.batch.builder: legacy
+
+  # Tối ưu JVM memory
+  jvm:
+    memory: -Xmx256m -Xms128m
+
+server:
+  port: ${PORT:8080}
+  forward-headers-strategy: native
+
+logging:
+  level:
+    root: WARN
+    com.simplecommerce_mdm: INFO
+    org.springframework.security: WARN
+    org.hibernate: WARN
+    org.springframework.web: WARN
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Tối ưu cho free tier
+spring:
+  task:
+    execution:
+      pool:
+        core-size: 2
+        max-size: 4
+        queue-capacity: 10
+  cache:
+    type: none
+  session:
+    timeout: 30m
+
+# Security configurations
+security:
+  jwt:
+    secret-key: ${JWT_SECRET_KEY}
+    expiration: ${JWT_EXPIRATION:86400000}
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000}
+    accessKey: ${JWT_ACCESS_KEY}
+    refreshKey: ${JWT_REFRESH_KEY}
+
+# Brevo Email Service
+brevo:
+  api-key: ${BREVO_API_KEY}
+  sender:
+    email: no-reply@simplecommerce.com
+    name: SimpleCommerce MDM
+
+# Cloudinary
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME}
+  api-key: ${CLOUDINARY_API_KEY}
+  api-secret: ${CLOUDINARY_API_SECRET}
+
+# Swagger
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
