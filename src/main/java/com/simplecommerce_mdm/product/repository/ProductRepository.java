@@ -183,15 +183,23 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     void softDeleteProductByIdAndShop(@Param("id") Long id, @Param("shop") Shop shop);
 
     // Stats: Top products by quantity/revenue for a shop
-    @Query("SELECT oi.variant.product.id AS productId, oi.variant.product.name AS productName, " +
+    @Query(value = "SELECT p.id AS productId, p.name AS productName, " +
            "SUM(oi.quantity) AS totalQuantity, SUM(oi.subtotal) AS totalRevenue " +
-           "FROM OrderItem oi WHERE oi.order.shop.id = :shopId AND oi.order.orderStatus = 'COMPLETED' " +
-           "GROUP BY oi.variant.product.id, oi.variant.product.name ORDER BY totalQuantity DESC")
+           "FROM order_items oi " +
+           "JOIN orders o ON oi.order_id = o.id " +
+           "JOIN product_variants pv ON oi.variant_id = pv.id " +
+           "JOIN products p ON pv.product_id = p.id " +
+           "WHERE o.shop_id = :shopId AND o.order_status = 'COMPLETED' " +
+           "GROUP BY p.id, p.name ORDER BY totalQuantity DESC", nativeQuery = true)
     List<Object[]> findTopProductsByQuantityForShop(@Param("shopId") Long shopId);
 
-    @Query("SELECT oi.variant.product.id AS productId, oi.variant.product.name AS productName, " +
+    @Query(value = "SELECT p.id AS productId, p.name AS productName, " +
            "SUM(oi.quantity) AS totalQuantity, SUM(oi.subtotal) AS totalRevenue " +
-           "FROM OrderItem oi WHERE oi.order.shop.id = :shopId AND oi.order.orderStatus = 'COMPLETED' " +
-           "GROUP BY oi.variant.product.id, oi.variant.product.name ORDER BY totalRevenue DESC")
+           "FROM order_items oi " +
+           "JOIN orders o ON oi.order_id = o.id " +
+           "JOIN product_variants pv ON oi.variant_id = pv.id " +
+           "JOIN products p ON pv.product_id = p.id " +
+           "WHERE o.shop_id = :shopId AND o.order_status = 'COMPLETED' " +
+           "GROUP BY p.id, p.name ORDER BY totalRevenue DESC", nativeQuery = true)
     List<Object[]> findTopProductsByRevenueForShop(@Param("shopId") Long shopId);
 } 
