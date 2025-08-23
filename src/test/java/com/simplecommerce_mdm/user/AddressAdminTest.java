@@ -37,14 +37,14 @@ public class AddressAdminTest {
     @Test
     public void testAdminAddressResponseCreation() {
         AdminAddressResponse response = AdminAddressResponse.builder()
-                .id(1L)
+                .userAddressId(1L)
                 .userId(1L)
                 .userEmail("user@example.com")
                 .city("Ho Chi Minh")
                 .build();
         
         assertNotNull(response);
-        assertEquals(1L, response.getId());
+        assertEquals(1L, response.getUserAddressId());
         assertEquals(1L, response.getUserId());
         assertEquals("user@example.com", response.getUserEmail());
         assertEquals("Ho Chi Minh", response.getCity());

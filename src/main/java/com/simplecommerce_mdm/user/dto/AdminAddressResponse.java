@@ -15,7 +15,10 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 public class AdminAddressResponse {
 
-    private Long id;
+    private Long userAddressId;  // UserAddress ID - rõ ràng hơn
+    
+    // Address ID for frontend operations
+    private Long addressId;
     
     // User information
     private Long userId;
