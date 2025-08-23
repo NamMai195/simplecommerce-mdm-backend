@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 @Data
 @Builder
@@ -38,6 +39,9 @@ public class OrderListResponse {
     // Order summary
     private Integer totalItems;
     private Integer totalQuantity;
+    
+    // Product images for frontend display
+    private List<String> productImageUrls;
     
     // Timestamps
     private OffsetDateTime orderedAt;
