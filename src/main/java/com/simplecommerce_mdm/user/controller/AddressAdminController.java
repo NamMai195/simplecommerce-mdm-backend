@@ -59,13 +59,13 @@ public class AddressAdminController {
     }
 
     /**
-     * Get address by ID (admin only)
+     * Get address by UserAddress ID (admin only)
      */
-    @GetMapping("/{addressId}")
-    public ResponseEntity<ApiResponse<AdminAddressResponse>> getAddressById(@PathVariable Long addressId) {
-        log.info("Admin getting address: {}", addressId);
+    @GetMapping("/{userAddressId}")
+    public ResponseEntity<ApiResponse<AdminAddressResponse>> getAddressById(@PathVariable Long userAddressId) {
+        log.info("Admin getting address by userAddressId: {}", userAddressId);
         
-        AdminAddressResponse address = addressService.getAddressByIdForAdmin(addressId);
+        AdminAddressResponse address = addressService.getAddressByUserAddressIdForAdmin(userAddressId);
         
         return ResponseEntity.ok(ApiResponse.<AdminAddressResponse>builder()
                 .statusCode(HttpStatus.OK.value())
@@ -75,19 +75,19 @@ public class AddressAdminController {
     }
 
     /**
-     * Delete address by ID (admin only)
+     * Delete address by UserAddress ID (admin only)
      */
-    @DeleteMapping("/{addressId}")
+    @DeleteMapping("/{userAddressId}")
     public ResponseEntity<ApiResponse<Void>> deleteAddress(
-            @PathVariable Long addressId,
+            @PathVariable Long userAddressId,
             @RequestBody(required = false) AdminAddressDeleteRequest deleteRequest) {
         
         String reason = deleteRequest != null ? deleteRequest.getReason() : "Admin deletion";
         Long adminId = deleteRequest != null ? deleteRequest.getAdminId() : null;
         
-        log.info("Admin {} deleting address: {} with reason: {}", adminId, addressId, reason);
+        log.info("Admin {} deleting address: {} with reason: {}", adminId, userAddressId, reason);
         
-        addressService.deleteAddressForAdmin(addressId, adminId, reason);
+        addressService.deleteAddressByUserAddressIdForAdmin(userAddressId, adminId, reason);
         
         return ResponseEntity.ok(ApiResponse.<Void>builder()
                 .statusCode(HttpStatus.OK.value())
