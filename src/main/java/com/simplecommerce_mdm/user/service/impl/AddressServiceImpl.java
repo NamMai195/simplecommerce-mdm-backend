@@ -314,12 +314,41 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
+    public AdminAddressResponse getAddressByUserAddressIdForAdmin(Long userAddressId) {
+        log.info("Admin getting address by userAddressId: {}", userAddressId);
+        
+        UserAddress userAddress = userAddressRepository.findById(userAddressId)
+                .orElseThrow(() -> new ResourceNotFoundException("UserAddress not found with id: " + userAddressId));
+        
+        return mapToAdminAddressResponse(userAddress);
+    }
+
+    @Override
     @Transactional
     public void deleteAddressForAdmin(Long addressId, Long adminId, String reason) {
         log.info("Admin {} deleting address: {} with reason: {}", adminId, addressId, reason);
         
         UserAddress userAddress = userAddressRepository.findByAddressId(addressId)
                 .orElseThrow(() -> new ResourceNotFoundException("UserAddress not found for address: " + addressId));
+        
+        // Check if this is a default address
+        if (Boolean.TRUE.equals(userAddress.getIsDefaultShipping()) || Boolean.TRUE.equals(userAddress.getIsDefaultBilling())) {
+            throw new InvalidDataException("Cannot delete default address. Please set another address as default first.");
+        }
+        
+        // Soft delete the UserAddress (Address entity remains for potential reuse)
+        userAddressRepository.delete(userAddress);
+        
+        log.info("Address deleted successfully by admin {} with reason: {}", adminId, reason);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAddressByUserAddressIdForAdmin(Long userAddressId, Long adminId, String reason) {
+        log.info("Admin {} deleting address by userAddressId: {} with reason: {}", adminId, userAddressId, reason);
+        
+        UserAddress userAddress = userAddressRepository.findById(userAddressId)
+                .orElseThrow(() -> new ResourceNotFoundException("UserAddress not found with id: " + userAddressId));
         
         // Check if this is a default address
         if (Boolean.TRUE.equals(userAddress.getIsDefaultShipping()) || Boolean.TRUE.equals(userAddress.getIsDefaultBilling())) {
