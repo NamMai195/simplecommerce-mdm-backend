@@ -372,7 +372,8 @@ public class AddressServiceImpl implements AddressService {
         User user = userAddress.getUser();
         
         return AdminAddressResponse.builder()
-                .id(userAddress.getId())
+                .userAddressId(userAddress.getId())    // UserAddress ID - rõ ràng hơn
+                .addressId(address.getId())            // Address ID for frontend operations
                 .userId(user.getId())
                 .userEmail(user.getEmail())
                 .userFullName(user.getFullName())
