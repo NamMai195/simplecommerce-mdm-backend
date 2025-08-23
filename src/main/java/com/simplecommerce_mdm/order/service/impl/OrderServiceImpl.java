@@ -662,6 +662,19 @@ public class OrderServiceImpl implements OrderService {
         int totalQuantity = orderItemRepository.sumQuantityByOrderId(order.getId());
         BigDecimal totalAmount = order.getSubtotalAmount().add(order.getShippingFee());
         
+        // Get product images from order items
+        List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
+        List<String> productImageUrls = orderItems.stream()
+                .map(item -> {
+                    if (item.getVariantImageCloudinaryPublicIdSnapshot() != null) {
+                        return cloudinaryService.getImageUrl(item.getVariantImageCloudinaryPublicIdSnapshot());
+                    }
+                    return null;
+                })
+                .filter(url -> url != null)
+                .distinct() // Remove duplicates
+                .collect(Collectors.toList());
+        
         return OrderListResponse.builder()
                 .id(order.getId())
                 .orderNumber(order.getOrderNumber())
@@ -675,6 +688,7 @@ public class OrderServiceImpl implements OrderService {
                 .totalAmount(totalAmount)
                 .totalItems(totalItems)
                 .totalQuantity(totalQuantity)
+                .productImageUrls(productImageUrls)
                 .orderedAt(order.getOrderedAt())
                 .createdAt(order.getCreatedAt())
                 .build();
