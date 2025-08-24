@@ -43,6 +43,13 @@ public class MasterOrder extends BaseEntity {
     @Column(name = "billing_address_snapshot", columnDefinition = "TEXT")
     private String billingAddressSnapshot;
 
+    // Contact information for shipping (from UserAddress)
+    @Column(name = "shipping_contact_name", nullable = false, length = 255)
+    private String shippingContactName;
+
+    @Column(name = "shipping_contact_phone", nullable = false, length = 20)
+    private String shippingContactPhone;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "overall_status", nullable = false)
     @Builder.Default

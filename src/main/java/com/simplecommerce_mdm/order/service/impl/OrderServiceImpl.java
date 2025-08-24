@@ -14,8 +14,10 @@ import com.simplecommerce_mdm.product.repository.ProductVariantRepository;
 import com.simplecommerce_mdm.product.repository.ShopRepository;
 import com.simplecommerce_mdm.user.model.User;
 import com.simplecommerce_mdm.user.model.Address;
+import com.simplecommerce_mdm.user.model.UserAddress;
 import com.simplecommerce_mdm.user.repository.UserRepository;
 import com.simplecommerce_mdm.user.repository.AddressRepository;
+import com.simplecommerce_mdm.user.repository.UserAddressRepository;
 import com.simplecommerce_mdm.cloudinary.service.CloudinaryService;
 import com.simplecommerce_mdm.email.service.EmailService;
 import com.simplecommerce_mdm.email.events.OrderEmailEvents;
@@ -55,6 +57,7 @@ public class OrderServiceImpl implements OrderService {
     private final ProductVariantRepository productVariantRepository;
     private final ShopRepository shopRepository;
     private final AddressRepository addressRepository;
+    private final UserAddressRepository userAddressRepository;
     private final CloudinaryService cloudinaryService;
     private final ModelMapper modelMapper;
     private final EmailService emailService;
@@ -357,15 +360,18 @@ public class OrderServiceImpl implements OrderService {
     }
     
     private MasterOrder createMasterOrder(User user, CheckoutRequest request, PaymentMethod paymentMethod, String orderGroupNumber) {
-        // Fetch shipping address
-        Address shippingAddress = addressRepository.findById(request.getShippingAddressId())
+        // Fetch shipping UserAddress (to get both address and contact info)
+        UserAddress shippingUserAddress = userAddressRepository.findByIdAndUserId(request.getShippingAddressId(), user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Shipping address not found with id: " + request.getShippingAddressId()));
+        Address shippingAddress = shippingUserAddress.getAddress();
         
         // Fetch billing address (use shipping address if not specified)
         Address billingAddress = shippingAddress;
+        UserAddress billingUserAddress = shippingUserAddress;
         if (request.getBillingAddressId() != null) {
-            billingAddress = addressRepository.findById(request.getBillingAddressId())
+            billingUserAddress = userAddressRepository.findByIdAndUserId(request.getBillingAddressId(), user.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Billing address not found with id: " + request.getBillingAddressId()));
+            billingAddress = billingUserAddress.getAddress();
         }
         
         // Create address snapshots
@@ -379,6 +385,8 @@ public class OrderServiceImpl implements OrderService {
                 .customerPhone(request.getCustomerPhone() != null ? request.getCustomerPhone() : user.getPhoneNumber())
                 .shippingAddressSnapshot(shippingAddressSnapshot)
                 .billingAddressSnapshot(billingAddressSnapshot)
+                .shippingContactName(shippingUserAddress.getContactFullName())
+                .shippingContactPhone(shippingUserAddress.getContactPhoneNumber())
                 .overallStatus(MasterOrderStatus.AWAITING_CONFIRMATION) // COD starts with awaiting confirmation
                 .totalAmountPaid(BigDecimal.ZERO) // Will be updated later
                 .paymentMethodSnapshot(paymentMethod.getName())
@@ -586,6 +594,8 @@ public class OrderServiceImpl implements OrderService {
                 .customerPhone(masterOrder.getCustomerPhone())
                 .shippingAddressSnapshot(masterOrder.getShippingAddressSnapshot())
                 .billingAddressSnapshot(masterOrder.getBillingAddressSnapshot())
+                .shippingContactName(masterOrder.getShippingContactName())
+                .shippingContactPhone(masterOrder.getShippingContactPhone())
                 .overallStatus(masterOrder.getOverallStatus())
                 .totalAmountPaid(masterOrder.getTotalAmountPaid())
                 .totalDiscountAmount(masterOrder.getTotalDiscountAmount())
