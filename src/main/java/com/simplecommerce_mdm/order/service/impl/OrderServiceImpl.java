@@ -28,7 +28,9 @@ import com.simplecommerce_mdm.common.enums.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import com.simplecommerce_mdm.config.BusinessConfigService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -46,6 +48,20 @@ import java.util.stream.Collectors;
 @Transactional
 public class OrderServiceImpl implements OrderService {
 
+    // Business configuration for shipping
+    @Value("${business.shipping.free-threshold:500000}")
+    private BigDecimal shippingFreeThreshold;
+    
+    @Value("${business.shipping.default-fee:30000}")
+    private BigDecimal shippingDefaultFee;
+    
+    @Value("${business.shipping.default-carrier:Viettel Post}")
+    private String shippingDefaultCarrier;
+    
+    @Value("${business.order.stock-update-max-retries:3}")
+    private int stockUpdateMaxRetries;
+
+    private final BusinessConfigService businessConfigService;
     private final MasterOrderRepository masterOrderRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -453,7 +469,7 @@ public class OrderServiceImpl implements OrderService {
 
             int attempts = 0;
             boolean updated = false;
-            while (attempts < 3 && !updated) {
+            while (attempts < stockUpdateMaxRetries && !updated) {
                 attempts++;
                 ProductVariant variant = productVariantRepository.findById(variantId)
                         .orElseThrow(() -> new ResourceNotFoundException("Variant not found: " + variantId));
@@ -467,7 +483,7 @@ public class OrderServiceImpl implements OrderService {
                     updated = true;
                     log.info("Decreased stock for variant {} by {}. New stock: {}", variant.getId(), qty, variant.getStockQuantity());
                 } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
-                    log.warn("Optimistic lock conflict on variant {} attempt {}/3", variantId, attempts);
+                    log.warn("Optimistic lock conflict on variant {} attempt {}/{}", variantId, attempts, stockUpdateMaxRetries);
                 }
             }
             if (!updated) {
@@ -485,7 +501,7 @@ public class OrderServiceImpl implements OrderService {
 
             int attempts = 0;
             boolean updated = false;
-            while (attempts < 3 && !updated) {
+            while (attempts < stockUpdateMaxRetries && !updated) {
                 attempts++;
                 ProductVariant variant = productVariantRepository.findById(variantId)
                         .orElseThrow(() -> new ResourceNotFoundException("Variant not found: " + variantId));
@@ -496,7 +512,7 @@ public class OrderServiceImpl implements OrderService {
                     updated = true;
                     log.info("Restored stock for variant {} by {}. New stock: {}", variant.getId(), qty, variant.getStockQuantity());
                 } catch (org.springframework.orm.ObjectOptimisticLockingFailureException e) {
-                    log.warn("Optimistic lock conflict on variant {} attempt {}/3", variantId, attempts);
+                    log.warn("Optimistic lock conflict on variant {} attempt {}/{}", variantId, attempts, stockUpdateMaxRetries);
                 }
             }
             if (!updated) {
@@ -511,11 +527,17 @@ public class OrderServiceImpl implements OrderService {
     }
     
     private BigDecimal calculateShippingFee(Shop shop, BigDecimal subtotal) {
-        // Simple shipping calculation - in real app this would be more complex
-        if (subtotal.compareTo(BigDecimal.valueOf(500000)) >= 0) { // Free shipping over 500k VND
+        // Log business config usage
+        businessConfigService.logConfigurationUsage("OrderService", "shippingFreeThreshold", shippingFreeThreshold);
+        businessConfigService.logConfigurationUsage("OrderService", "shippingDefaultFee", shippingDefaultFee);
+        
+        // Configurable shipping calculation
+        if (subtotal.compareTo(shippingFreeThreshold) >= 0) {
+            log.info("🆓 Free shipping applied for subtotal: {} VND (threshold: {} VND)", subtotal, shippingFreeThreshold);
             return BigDecimal.ZERO;
         }
-        return BigDecimal.valueOf(30000); // Default shipping fee 30k VND
+        log.info("💸 Standard shipping fee applied: {} VND for subtotal: {} VND", shippingDefaultFee, subtotal);
+        return shippingDefaultFee;
     }
     
     private boolean canCancelOrder(OrderStatus status) {

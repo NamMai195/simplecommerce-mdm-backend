@@ -46,6 +46,32 @@ public class BrevoEmailService implements EmailService {
     @Value("${brevo.sender.name}")
     private String senderName;
 
+    // Business configuration for email timing and content
+    @Value("${business.email.confirmation-deadline-hours:24}")
+    private int confirmationDeadlineHours;
+    
+    @Value("${business.email.delivery-estimation-days:3}")
+    private int deliveryEstimationDays;
+    
+    @Value("${business.shipping.default-carrier:Viettel Post}")
+    private String defaultCarrier;
+    
+    // Social media and company links for emails
+    @Value("${business.social.facebook-url:https://facebook.com/simplecommerce}")
+    private String facebookUrl;
+    
+    @Value("${business.social.instagram-url:https://instagram.com/simplecommerce}")
+    private String instagramUrl;
+    
+    @Value("${business.company.website-url:https://simplecommerce.com}")
+    private String companyWebsiteUrl;
+    
+    @Value("${business.support.email:support@simplecommerce.com}")
+    private String supportEmail;
+    
+    @Value("${business.support.phone:+84-xxx-xxx-xxx}")
+    private String supportPhone;
+
     private final CloudinaryService cloudinaryService;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
@@ -353,7 +379,7 @@ public class BrevoEmailService implements EmailService {
         // Tracking info (if shipped) - these fields don't exist in current Order entity
         if (currentStatus == OrderStatus.SHIPPED) {
             params.put("trackingNumber", ""); // Order entity doesn't have trackingNumber
-            params.put("carrierName", "Viettel Post"); // Default carrier
+            params.put("carrierName", defaultCarrier);
             params.put("estimatedDelivery", calculateEstimatedDelivery());
         }
 
@@ -507,11 +533,11 @@ public class BrevoEmailService implements EmailService {
     }
 
     private String calculateConfirmationDeadline(LocalDateTime orderTime) {
-        return orderTime.plusHours(24).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        return orderTime.plusHours(confirmationDeadlineHours).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
     }
 
     private String calculateEstimatedDelivery() {
-        return LocalDateTime.now().plusDays(3).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        return LocalDateTime.now().plusDays(deliveryEstimationDays).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"));
     }
 
     private SendSmtpEmail createBaseEmail(String to) {
