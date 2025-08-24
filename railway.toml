@@ -13,6 +13,6 @@ restartPolicyMaxRetries = 10
 # memory = "1024Mi"
 # cpu = "1000m"
 
-# JVM optimization for 1GB RAM
+# Ultra-optimized JVM for 1GB RAM with minimal lag
 [build.env]
-JAVA_OPTS = "-Xmx768m -Xms256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200 -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -XX:MaxRAMPercentage=75.0"
+JAVA_OPTS = "-Xmx512m -Xms128m -XX:+UseG1GC -XX:MaxGCPauseMillis=100 -XX:+UseStringDeduplication -XX:+OptimizeStringConcat -XX:MaxRAMPercentage=50.0 -XX:+DisableExplicitGC -XX:+UseCompressedOops -XX:+UseCompressedClassPointers -XX:+UseFastAccessorMethods"
