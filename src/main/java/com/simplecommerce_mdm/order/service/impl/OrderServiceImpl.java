@@ -12,6 +12,7 @@ import com.simplecommerce_mdm.product.model.ProductVariant;
 import com.simplecommerce_mdm.product.model.Shop;
 import com.simplecommerce_mdm.product.repository.ProductVariantRepository;
 import com.simplecommerce_mdm.product.repository.ShopRepository;
+import com.simplecommerce_mdm.product.repository.ProductImageRepository;
 import com.simplecommerce_mdm.user.model.User;
 import com.simplecommerce_mdm.user.model.Address;
 import com.simplecommerce_mdm.user.repository.UserRepository;
@@ -54,6 +55,7 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final ProductVariantRepository productVariantRepository;
     private final ShopRepository shopRepository;
+    private final ProductImageRepository productImageRepository;
     private final AddressRepository addressRepository;
     private final CloudinaryService cloudinaryService;
     private final ModelMapper modelMapper;
@@ -415,6 +417,7 @@ public class OrderServiceImpl implements OrderService {
                     .variantSkuSnapshot(variant.getSku())
                     .variantOptionsSnapshot(variant.getOptions())
                     .variantImageCloudinaryPublicIdSnapshot(variant.getMainImageCloudinaryPublicId())
+                    .productImageCloudinaryPublicIdSnapshot(getProductMainImage(variant.getProduct()))
                     .quantity(cartItem.getQuantity())
                     .unitPrice(cartItem.getPriceAtAddition())
                     .subtotal(cartItem.getPriceAtAddition().multiply(BigDecimal.valueOf(cartItem.getQuantity())))
@@ -697,6 +700,39 @@ public class OrderServiceImpl implements OrderService {
                 .orderedAt(order.getOrderedAt())
                 .createdAt(order.getCreatedAt())
                 .build();
+    }
+
+    // === HELPER METHODS ===
+    
+    /**
+     * Get the main image URL for a product (first image marked as primary)
+     */
+    private String getProductMainImage(com.simplecommerce_mdm.product.model.Product product) {
+        try {
+            // Get product images from ProductImage repository
+            List<com.simplecommerce_mdm.product.model.ProductImage> productImages = 
+                productImageRepository.findByTargetIdAndTargetType(product.getId(), ImageTargetType.PRODUCT);
+            
+            // Find primary image first, then fallback to first available image
+            Optional<com.simplecommerce_mdm.product.model.ProductImage> primaryImage = 
+                productImages.stream()
+                    .filter(img -> img.getIsPrimary() != null && img.getIsPrimary())
+                    .findFirst();
+            
+            if (primaryImage.isPresent()) {
+                return primaryImage.get().getCloudinaryPublicId();
+            }
+            
+            // Fallback to first available image
+            if (!productImages.isEmpty()) {
+                return productImages.get(0).getCloudinaryPublicId();
+            }
+            
+            return null;
+        } catch (Exception e) {
+            log.warn("Failed to get product main image for product {}: {}", product.getId(), e.getMessage());
+            return null;
+        }
     }
 
     // === EMAIL EVENT PUBLISHERS ===
