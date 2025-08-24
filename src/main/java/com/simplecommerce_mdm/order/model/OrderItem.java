@@ -41,6 +41,9 @@ public class OrderItem extends BaseEntity {
     @Column(name = "variant_image_cloudinary_public_id_snapshot", length = 255)
     private String variantImageCloudinaryPublicIdSnapshot;
 
+    @Column(name = "product_image_cloudinary_public_id_snapshot", length = 255)
+    private String productImageCloudinaryPublicIdSnapshot;
+
     @Column(name = "quantity", nullable = false)
     private Integer quantity;
 
