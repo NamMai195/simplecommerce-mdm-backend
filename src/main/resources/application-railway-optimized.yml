@@ -46,11 +46,10 @@ spring:
         order_inserts: true
         order_updates: true
         batch_versioned_data: true
-        # Cache optimization
+        # Cache optimization (disabled for Railway 1GB RAM)
         cache:
-          use_second_level_cache: true
-          use_query_cache: true
-          region.factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+          use_second_level_cache: false
+          use_query_cache: false
 
   # OAuth2 Configuration
   security:
