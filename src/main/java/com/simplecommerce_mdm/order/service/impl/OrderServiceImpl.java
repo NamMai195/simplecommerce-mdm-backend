@@ -662,12 +662,17 @@ public class OrderServiceImpl implements OrderService {
         int totalQuantity = orderItemRepository.sumQuantityByOrderId(order.getId());
         BigDecimal totalAmount = order.getSubtotalAmount().add(order.getShippingFee());
         
-        // Get product images from order items
+        // Get product images from order items with fallback logic
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
         List<String> productImageUrls = orderItems.stream()
                 .map(item -> {
+                    // Priority 1: Variant image (if available)
                     if (item.getVariantImageCloudinaryPublicIdSnapshot() != null) {
                         return cloudinaryService.getImageUrl(item.getVariantImageCloudinaryPublicIdSnapshot());
+                    }
+                    // Priority 2: Product image (fallback)
+                    if (item.getProductImageCloudinaryPublicIdSnapshot() != null) {
+                        return cloudinaryService.getImageUrl(item.getProductImageCloudinaryPublicIdSnapshot());
                     }
                     return null;
                 })
