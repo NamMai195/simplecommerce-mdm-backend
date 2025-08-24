@@ -15,7 +15,9 @@ import com.simplecommerce_mdm.user.repository.UserRepository;
 import com.simplecommerce_mdm.order.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.simplecommerce_mdm.config.BusinessConfigService;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -29,13 +31,20 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class StatsServiceImpl implements StatsService {
 
+    // Business configuration for commission rates
+    @Value("${business.commission.admin-rate:0.05}")
+    private BigDecimal adminCommissionRate;
+    
+    @Value("${business.commission.payment-gateway-rate:0.025}")
+    private BigDecimal paymentGatewayCommissionRate;
+
+    private final BusinessConfigService businessConfigService;
     private final OrderRepository orderRepository;
     private final ShopRepository shopRepository;
     private final ProductRepository productRepository;
     private final ProductVariantRepository productVariantRepository;
     private final UserRepository userRepository;
     private final PaymentRepository paymentRepository;
-    private static final java.math.BigDecimal COMMISSION_RATE = new java.math.BigDecimal("0.05");
 
     @Override
     @Transactional(readOnly = true)
@@ -58,16 +67,22 @@ public class StatsServiceImpl implements StatsService {
 
         long total = pending + processing + shipped + delivered + completed + cancelled;
 
+        // Log business config usage
+        businessConfigService.logConfigurationUsage("StatsService", "adminCommissionRate", adminCommissionRate);
+        
         // Revenue (sum from completed orders only) - placeholder: using subtotalAmount + shippingFee - discounts where available
         BigDecimal totalRevenue = sumRevenueForShop(shopId, null, null, Collections.singleton(OrderStatus.COMPLETED))
-                .multiply(java.math.BigDecimal.ONE.subtract(COMMISSION_RATE));
+                .multiply(java.math.BigDecimal.ONE.subtract(adminCommissionRate));
+        log.info("💰 Seller revenue calculated with commission rate: {}% (seller keeps: {}%)", 
+                adminCommissionRate.multiply(BigDecimal.valueOf(100)), 
+                BigDecimal.ONE.subtract(adminCommissionRate).multiply(BigDecimal.valueOf(100)));
 
         // Today revenue
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = start.plusDays(1);
         BigDecimal todayRevenue = sumRevenueForShop(shopId, start, end, Collections.singleton(OrderStatus.COMPLETED))
-                .multiply(java.math.BigDecimal.ONE.subtract(COMMISSION_RATE));
+                .multiply(java.math.BigDecimal.ONE.subtract(adminCommissionRate));
 
         return SellerStatsOverviewResponse.builder()
                 .shopId(shopId)
@@ -109,7 +124,7 @@ public class StatsServiceImpl implements StatsService {
                     .map(this::calculateOrderRevenue)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
             series.add(new SalesSeriesPoint(date, (long) dayOrders.size(),
-                    revenue.multiply(java.math.BigDecimal.ONE.subtract(COMMISSION_RATE))));
+                    revenue.multiply(java.math.BigDecimal.ONE.subtract(adminCommissionRate))));
         }
         return series;
     }
@@ -175,7 +190,7 @@ public class StatsServiceImpl implements StatsService {
         LocalDateTime start = today.minusDays(days - 1).atStartOfDay();
         LocalDateTime end = today.plusDays(1).atStartOfDay();
         return orderRepository.avgOrderValueForShop(shop.getId(), start, end)
-                .multiply(java.math.BigDecimal.ONE.subtract(COMMISSION_RATE));
+                .multiply(java.math.BigDecimal.ONE.subtract(adminCommissionRate));
     }
 
     @Override
@@ -228,14 +243,19 @@ public class StatsServiceImpl implements StatsService {
 
         long total = pending + processing + shipped + delivered + completed + cancelled;
 
+        // Log business config usage for admin stats
+        businessConfigService.logConfigurationUsage("AdminStatsService", "adminCommissionRate", adminCommissionRate);
+        
         // Platform revenue = 5% commission of GMV from completed orders
         BigDecimal totalRevenue = sumRevenueForAll(null, null, Collections.singleton(OrderStatus.COMPLETED))
-                .multiply(COMMISSION_RATE);
+                .multiply(adminCommissionRate);
+        log.info("🏛️ Admin commission revenue calculated with rate: {}%", 
+                adminCommissionRate.multiply(BigDecimal.valueOf(100)));
         LocalDate today = LocalDate.now();
         LocalDateTime start = today.atStartOfDay();
         LocalDateTime end = start.plusDays(1);
         BigDecimal todayRevenue = sumRevenueForAll(start, end, Collections.singleton(OrderStatus.COMPLETED))
-                .multiply(COMMISSION_RATE);
+                .multiply(adminCommissionRate);
 
         // Other totals (placeholders using repos)
         long totalUsers = userRepository.count();
@@ -279,7 +299,7 @@ public class StatsServiceImpl implements StatsService {
             BigDecimal revenue = dayOrders.stream()
                     .map(this::calculateOrderRevenue)
                     .reduce(BigDecimal.ZERO, BigDecimal::add);
-            series.add(new SalesSeriesPoint(date, (long) dayOrders.size(), revenue.multiply(COMMISSION_RATE)));
+            series.add(new SalesSeriesPoint(date, (long) dayOrders.size(), revenue.multiply(adminCommissionRate)));
         }
         return series;
     }
