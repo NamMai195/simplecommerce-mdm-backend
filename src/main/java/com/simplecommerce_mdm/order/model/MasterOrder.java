@@ -44,10 +44,10 @@ public class MasterOrder extends BaseEntity {
     private String billingAddressSnapshot;
 
     // Contact information for shipping (from UserAddress)
-    @Column(name = "shipping_contact_name", nullable = false, length = 255)
+    @Column(name = "shipping_contact_name", nullable = true, length = 255)
     private String shippingContactName;
 
-    @Column(name = "shipping_contact_phone", nullable = false, length = 20)
+    @Column(name = "shipping_contact_phone", nullable = true, length = 20)
     private String shippingContactPhone;
 
     @Enumerated(EnumType.STRING)
