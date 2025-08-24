@@ -323,24 +323,7 @@ public class AddressServiceImpl implements AddressService {
         return mapToAdminAddressResponse(userAddress);
     }
 
-    @Override
-    @Transactional
-    public void deleteAddressForAdmin(Long addressId, Long adminId, String reason) {
-        log.info("Admin {} deleting address: {} with reason: {}", adminId, addressId, reason);
-        
-        UserAddress userAddress = userAddressRepository.findByAddressId(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException("UserAddress not found for address: " + addressId));
-        
-        // Check if this is a default address
-        if (Boolean.TRUE.equals(userAddress.getIsDefaultShipping()) || Boolean.TRUE.equals(userAddress.getIsDefaultBilling())) {
-            throw new InvalidDataException("Cannot delete default address. Please set another address as default first.");
-        }
-        
-        // Soft delete the UserAddress (Address entity remains for potential reuse)
-        userAddressRepository.delete(userAddress);
-        
-        log.info("Address deleted successfully by admin {} with reason: {}", adminId, reason);
-    }
+
 
     @Override
     @Transactional

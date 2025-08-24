@@ -28,6 +28,10 @@ public class MasterOrderResponse {
     private String shippingAddressSnapshot;
     private String billingAddressSnapshot;
     
+    // Shipping contact info (from UserAddress)
+    private String shippingContactName;
+    private String shippingContactPhone;
+    
     // Overall status
     private MasterOrderStatus overallStatus;
     

@@ -79,10 +79,7 @@ public interface AddressService {
      */
     AdminAddressResponse getAddressByUserAddressIdForAdmin(Long userAddressId);
 
-    /**
-     * Delete address by ID for admin (no user validation)
-     */
-    void deleteAddressForAdmin(Long addressId, Long adminId, String reason);
+
 
     /**
      * Delete address by UserAddress ID for admin (no user validation)
