@@ -71,5 +71,5 @@ security:
 brevo:
   api-key: ${BREVO_API_KEY}
   sender:
-    email: no-reply@simplecommerce.com # Production sender email
-    name: SimpleCommerce MDM 
+    email: ${BREVO_SENDER_EMAIL:no-reply@simplecommerce.com}
+    name: ${BREVO_SENDER_NAME:SimpleCommerce MDM} 

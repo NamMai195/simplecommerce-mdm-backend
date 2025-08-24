@@ -46,7 +46,9 @@ public class SecurityConfig {
                                 "/api/v1/test-email/**",
                                 "/api/v1/test/**",
                                 "/h2-console/**",
-                                "/favicon.ico"
+                                "/favicon.ico",
+                                "/actuator/**", // Railway healthcheck endpoints
+                                "/api-docs/**" // OpenAPI documentation
                         ).permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN") // API Admin yêu cầu quyền ADMIN
                         .requestMatchers("/api/v1/seller/**").hasRole("SELLER") // API Seller yêu cầu quyền SELLER

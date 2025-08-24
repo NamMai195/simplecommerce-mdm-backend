@@ -1,0 +1,136 @@
+# ==============================================
+# Railway Production Configuration 
+# Optimized for Railway.app deployment
+# ==============================================
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:${DATABASE_URL}}
+    username: ${SPRING_DATASOURCE_USERNAME:${DATABASE_USERNAME}}
+    password: ${SPRING_DATASOURCE_PASSWORD:${DATABASE_PASSWORD}}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 1
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1200000
+      auto-commit: false
+      leak-detection-threshold: 60000
+
+  h2:
+    console:
+      enabled: false
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    defer-datasource-initialization: false
+    show-sql: false
+    generate-ddl: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        use_sql_comments: false
+        default_schema: public
+        connection:
+          provider_disables_autocommit: false
+        jdbc:
+          time_zone: UTC+07:00
+
+  # OAuth2 Configuration - SECURE: Using environment variables only
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID}
+            client-secret: ${GOOGLE_CLIENT_SECRET}
+            scope:
+              - email
+              - profile
+
+logging:
+  level:
+    root: INFO
+    com.simplecommerce_mdm: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql.BasicBinder: WARN
+    org.springframework.web: WARN
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+
+# Swagger Configuration
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    operationsSorter: method
+  show-actuator: true
+
+# OpenAPI Configuration
+openapi:
+  service:
+    api-docs: backend-service
+    server: ${RAILWAY_STATIC_URL:https://simplecommerce-mdm-backend-production.up.railway.app}
+    title: Simplecommerce MDM API
+    version: 1.0.0
+    description: API documentation for Simplecommerce MDM - Railway Production
+
+# Frontend Configuration
+frontend:
+  url: ${FRONTEND_URL:https://simplecommerce-frontend.up.railway.app}
+
+# JWT Configuration - SECURE: Using environment variables only
+jwt:
+  expiryMinutes: 60
+  expiryDay: 14
+  accessKey: ${JWT_ACCESS_KEY}
+  refreshKey: ${JWT_REFRESH_KEY}
+
+# Brevo Email Service Configuration - SECURE: Using environment variables only
+brevo:
+  api-key: ${BREVO_API_KEY}
+  sender:
+    email: ${BREVO_SENDER_EMAIL}
+    name: ${BREVO_SENDER_NAME:SimpleCommerce MDM (Production)}
+
+# Cloudinary configuration - SECURE: Using environment variables only
+cloudinary:
+  cloud_name: ${CLOUDINARY_CLOUD_NAME}
+  api_key: ${CLOUDINARY_API_KEY}
+  api_secret: ${CLOUDINARY_API_SECRET}
+
+# Business Logic Configuration - All configurable via environment variables
+business:
+  email:
+    confirmation-deadline-hours: ${BUSINESS_EMAIL_CONFIRMATION_DEADLINE_HOURS:24}
+    delivery-estimation-days: ${BUSINESS_EMAIL_DELIVERY_ESTIMATION_DAYS:3}
+  social:
+    facebook-url: ${BUSINESS_SOCIAL_FACEBOOK_URL:https://facebook.com/simplecommerce}
+    instagram-url: ${BUSINESS_SOCIAL_INSTAGRAM_URL:https://instagram.com/simplecommerce}
+    website-url: ${BUSINESS_COMPANY_WEBSITE_URL:https://simplecommerce.com}
+  support:
+    email: ${BUSINESS_SUPPORT_EMAIL:support@simplecommerce.com}
+    phone: ${BUSINESS_SUPPORT_PHONE:+84-xxx-xxx-xxx}
+  shipping:
+    free-threshold: ${BUSINESS_SHIPPING_FREE_THRESHOLD:500000}
+    default-fee: ${BUSINESS_SHIPPING_DEFAULT_FEE:30000}
+    default-carrier: ${BUSINESS_SHIPPING_DEFAULT_CARRIER:Viettel Post}
+  commission:
+    admin-rate: ${BUSINESS_COMMISSION_ADMIN_RATE:0.05}
+    payment-gateway-rate: ${BUSINESS_COMMISSION_PAYMENT_GATEWAY_RATE:0.025}
+  order:
+    stock-update-max-retries: ${BUSINESS_ORDER_STOCK_UPDATE_MAX_RETRIES:3}
