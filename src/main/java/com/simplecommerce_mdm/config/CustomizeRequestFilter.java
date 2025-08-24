@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.simplecommerce_mdm.auth.service.JwtService;
 import com.simplecommerce_mdm.auth.service.UserServiceDetail;
+import com.simplecommerce_mdm.auth.repository.InvalidatedTokenRepository;
 import com.simplecommerce_mdm.common.enums.TokenType;
 import com.simplecommerce_mdm.exception.TokenValidationException;
 import jakarta.servlet.FilterChain;
@@ -40,15 +41,15 @@ public class CustomizeRequestFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final UserServiceDetail serviceDetail;
+    private final InvalidatedTokenRepository invalidatedTokenRepository;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+            throws ServletException, IOException {
         // --- TEMPORARY DEBUG LOGGING ---
         System.out.println("--- RECEIVED REQUEST TO: " + request.getRequestURI() + " ---");
         java.util.Collections.list(request.getHeaderNames())
-            .forEach(headerName -> 
-                System.out.println(headerName + ": " + request.getHeader(headerName))
-            );
+                .forEach(headerName -> System.out.println(headerName + ": " + request.getHeader(headerName)));
         System.out.println("--- END OF HEADERS ---");
         // --- END OF DEBUG LOGGING ---
         log.info("{} {}", request.getMethod(), request.getRequestURI());
@@ -58,6 +59,12 @@ public class CustomizeRequestFilter extends OncePerRequestFilter {
             if (StringUtils.hasLength(authHeader) && authHeader.startsWith("Bearer ")) {
                 String token = authHeader.substring(7);
                 log.info("token: {}...", token.substring(0, Math.min(token.length(), 20)));
+
+                // Check if token is blacklisted
+                if (invalidatedTokenRepository.findByTokenAndType(token, TokenType.ACCESS_TOKEN).isPresent()) {
+                    log.warn("Token is blacklisted: {}", token.substring(0, Math.min(token.length(), 20)));
+                    throw new AccessDeniedException("Token has been invalidated");
+                }
 
                 String email = jwtService.extractEmail(token, TokenType.ACCESS_TOKEN);
                 log.info("username: {}", email);
@@ -93,6 +100,7 @@ public class CustomizeRequestFilter extends OncePerRequestFilter {
 
     /**
      * Create error response with pretty template
+     * 
      * @param message
      * @return
      */

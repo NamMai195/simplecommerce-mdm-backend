@@ -17,6 +17,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
@@ -43,7 +45,8 @@ public class JwtServiceImpl implements JwtService {
     private String refreshKey;
 
     @Override
-    public String generateAccessToken(long userId, String username, Collection<? extends GrantedAuthority> authorities) {
+    public String generateAccessToken(long userId, String username,
+            Collection<? extends GrantedAuthority> authorities) {
         log.info("Generate access token for user {} (email: {}) with authorities {}", userId, username, authorities);
 
         Map<String, Object> claims = new HashMap<>();
@@ -54,7 +57,8 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public String generateRefreshToken(long userId, String username, Collection<? extends GrantedAuthority> authorities) {
+    public String generateRefreshToken(long userId, String username,
+            Collection<? extends GrantedAuthority> authorities) {
         log.info("Generate refresh token for user {} (email: {})", userId, username);
 
         Map<String, Object> claims = new HashMap<>();
@@ -135,6 +139,23 @@ public class JwtServiceImpl implements JwtService {
             throw new AccessDeniedException("Token không hợp lệ: userId không đúng định dạng");
         } catch (Exception e) {
             log.error("Error extracting userId from token: {}", e.getMessage());
+            throw new AccessDeniedException("Token không hợp lệ hoặc đã hết hạn");
+        }
+    }
+
+    @Override
+    public LocalDateTime extractExpiration(String token) {
+        log.info("----------[ extractExpiration ]----------");
+        try {
+            Claims claims = extraAllClaim(token, TokenType.ACCESS_TOKEN);
+            Date expiration = claims.getExpiration();
+            if (expiration == null) {
+                log.error("Token does not contain expiration");
+                throw new AccessDeniedException("Token không hợp lệ: không tìm thấy thời gian hết hạn");
+            }
+            return expiration.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+        } catch (Exception e) {
+            log.error("Error extracting expiration from token: {}", e.getMessage());
             throw new AccessDeniedException("Token không hợp lệ hoặc đã hết hạn");
         }
     }

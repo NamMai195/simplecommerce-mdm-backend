@@ -19,6 +19,9 @@ import com.simplecommerce_mdm.user.model.User;
 import com.simplecommerce_mdm.user.repository.RoleRepository;
 import com.simplecommerce_mdm.user.repository.UserRepository;
 import com.simplecommerce_mdm.auth.repository.EmailVerificationTokenRepository;
+import com.simplecommerce_mdm.auth.model.InvalidatedToken;
+import com.simplecommerce_mdm.auth.repository.InvalidatedTokenRepository;
+import com.simplecommerce_mdm.common.enums.TokenType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +37,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -73,6 +77,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
     private final EmailService emailService;
     private final HttpServletRequest httpServletRequest;
+    private final InvalidatedTokenRepository invalidatedTokenRepository;
 
     private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
@@ -135,9 +140,65 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
+    @Transactional
     public void logout(String authorizationHeader) {
-        // TODO: Implement token blacklisting mechanism
-        logger.info("Logout requested. Token (potentially invalidated): {}", authorizationHeader);
+        logger.info("Logout requested");
+
+        if (!StringUtils.hasText(authorizationHeader) || !authorizationHeader.startsWith("Bearer ")) {
+            logger.warn("Invalid authorization header format");
+            throw new InvalidDataException("Invalid authorization header");
+        }
+
+        String token = authorizationHeader.substring(7);
+
+        try {
+            // Extract user email from token
+            String userEmail = jwtService.extractEmail(token, TokenType.ACCESS_TOKEN);
+            Long userId = jwtService.extractUserId(token);
+
+            logger.info("Logging out user: {} (ID: {})", userEmail, userId);
+
+            // Check if user exists and is active
+            User user = userRepository.findByEmail(userEmail)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + userEmail));
+
+            if (!user.getIsActive()) {
+                logger.warn("Attempting to logout inactive user: {}", userEmail);
+                throw new InvalidDataException("User account is deactivated");
+            }
+
+            // Check if token is already invalidated
+            if (invalidatedTokenRepository.findByTokenAndType(token, TokenType.ACCESS_TOKEN).isPresent()) {
+                logger.warn("Token already invalidated for user: {}", userEmail);
+                throw new InvalidDataException("Token already invalidated");
+            }
+
+            // Get token expiration from JWT
+            LocalDateTime expiresAt = jwtService.extractExpiration(token);
+            LocalDateTime now = LocalDateTime.now();
+
+            // Create invalidated token record
+            InvalidatedToken invalidatedToken = InvalidatedToken.builder()
+                    .token(token)
+                    .userEmail(userEmail)
+                    .tokenType(com.simplecommerce_mdm.common.enums.TokenType.ACCESS_TOKEN)
+                    .expiresAt(expiresAt)
+                    .invalidatedAt(now)
+                    .ipAddress(getClientIpAddress())
+                    .userAgent(getUserAgent())
+                    .build();
+
+            invalidatedTokenRepository.save(invalidatedToken);
+
+            // Clear SecurityContext
+            SecurityContextHolder.clearContext();
+
+            logger.info("Successfully logged out user: {} (ID: {})", userEmail, userId);
+
+        } catch (Exception e) {
+            logger.error("Error during logout: {}", e.getMessage(), e);
+            throw new InvalidDataException("Logout failed: " + e.getMessage());
+        }
     }
 
     @Override

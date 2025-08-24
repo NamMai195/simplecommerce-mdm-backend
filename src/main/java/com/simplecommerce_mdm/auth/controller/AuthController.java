@@ -11,6 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import com.simplecommerce_mdm.config.CustomUserDetails;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -49,8 +52,11 @@ public class AuthController {
 
     @Operation(summary = "Logout User", description = "API logout user ")
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(@RequestHeader("Authorization") String authorizationHeader) {
-        log.info("Logout request");
+    @PreAuthorize("hasAnyRole('USER', 'SELLER', 'ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> logout(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        log.info("Logout request from user: {}", userDetails.getUser().getEmail());
         authService.logout(authorizationHeader);
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .message("Logout successful")
