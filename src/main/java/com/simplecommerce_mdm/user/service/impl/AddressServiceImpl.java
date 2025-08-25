@@ -169,6 +169,7 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
+    @Transactional
     public void deleteAddress(Long addressId, Long userId) {
         log.info("Deleting address: {} for user: {}", addressId, userId);
         
@@ -187,13 +188,11 @@ public class AddressServiceImpl implements AddressService {
             throw new InvalidDataException("Cannot delete default address. Please set another address as default first.");
         }
 
-        // Delete UserAddress first (maintains referential integrity)
+        // Delete UserAddress only (keep Address for potential reuse)
         userAddressRepository.delete(userAddress);
         
-        // Check if Address is used by other users
-        if (!userAddressRepository.existsByAddress(userAddress.getAddress())) {
-            addressRepository.delete(userAddress.getAddress());
-        }
+        // Note: We don't delete the Address entity to avoid foreign key constraint issues
+        // The Address can be reused by other users or cleaned up later if needed
         
         log.info("Address deleted successfully with id: {}", addressId);
     }
