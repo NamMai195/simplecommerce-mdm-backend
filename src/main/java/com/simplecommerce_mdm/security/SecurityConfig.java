@@ -82,14 +82,24 @@ public class SecurityConfig {
                 List<String> allowedOrigins = Arrays.asList(
                         adminSellerFrontendUrl,
                         userFrontendUrl,
-                        defaultFrontendUrl
+                        defaultFrontendUrl,
+                        // Vercel frontends
+                        "https://simplecommerce-mdm-as-frontend.vercel.app",
+                        "https://simplecommerce-user-frontend.vercel.app",
+                        "https://simplecommerce-frontend.vercel.app",
+                        // Custom domain
+                        "https://sc-mdm-api.nammai.id.vn",
+                        // Localhost for development
+                        "http://localhost:3000",
+                        "http://localhost:3001",
+                        "http://localhost:5173"
                 );
                 
                 registry.addMapping("/**")
                         .allowedOrigins(allowedOrigins.toArray(new String[0]))
-                        .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
+                        .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD")
                         .allowedHeaders("*")
-                        .exposedHeaders("Authorization")
+                        .exposedHeaders("Authorization", "Content-Type", "Content-Length")
                         .allowCredentials(true)
                         .maxAge(3600);
             }
