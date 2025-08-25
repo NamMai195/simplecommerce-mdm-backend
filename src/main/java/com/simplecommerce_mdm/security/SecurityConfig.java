@@ -1,6 +1,7 @@
 package com.simplecommerce_mdm.security;
 
 import com.simplecommerce_mdm.config.CustomizeRequestFilter;
+import com.simplecommerce_mdm.security.CorsFilter;
 import io.micrometer.common.lang.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -41,6 +42,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
+                .addFilterBefore(corsFilter(), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(customizeRequestFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
@@ -104,6 +106,12 @@ public class SecurityConfig {
                         .maxAge(3600);
             }
         };
+    }
+
+    // Thêm CorsFilter để xử lý CORS trước Spring Security
+    @Bean
+    public CorsFilter corsFilter() {
+        return new CorsFilter();
     }
 
 }
