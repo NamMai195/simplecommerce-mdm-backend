@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
@@ -31,4 +33,7 @@ public class CheckoutRequest {
 
     // Optional: specific shipping method (can be null for default)
     private Long shippingMethodId;
+
+    // Optional: specific cart item IDs to checkout (if null, checkout all items in cart)
+    private List<Long> selectedCartItemIds;
 } 

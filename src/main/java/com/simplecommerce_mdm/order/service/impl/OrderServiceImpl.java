@@ -93,7 +93,22 @@ public class OrderServiceImpl implements OrderService {
         Cart cart = cartRepository.findByUserId(userId)
                 .orElseThrow(() -> new InvalidDataException("Cart is empty"));
         
-        List<CartItem> cartItems = cartItemRepository.findByCartUserId(userId);
+        // Get cart items based on selection
+        List<CartItem> cartItems;
+        if (request.getSelectedCartItemIds() != null && !request.getSelectedCartItemIds().isEmpty()) {
+            // User selected specific items
+            cartItems = cartItemRepository.findByCartUserIdAndIdIn(userId, request.getSelectedCartItemIds());
+            if (cartItems.isEmpty()) {
+                throw new InvalidDataException("No selected cart items found");
+            }
+            if (cartItems.size() != request.getSelectedCartItemIds().size()) {
+                throw new InvalidDataException("Some selected cart items not found");
+            }
+        } else {
+            // Checkout all items in cart
+            cartItems = cartItemRepository.findByCartUserId(userId);
+        }
+        
         if (cartItems.isEmpty()) {
             throw new InvalidDataException("Cart is empty");
         }
@@ -147,8 +162,12 @@ public class OrderServiceImpl implements OrderService {
         // 11. Update inventory
         updateInventoryForOrder(cartItems);
         
-        // 12. Clear user's cart
-        clearUserCart(userId);
+        // 12. Clear selected items from user's cart (or all if no selection)
+        if (request.getSelectedCartItemIds() != null && !request.getSelectedCartItemIds().isEmpty()) {
+            clearSelectedCartItems(userId, request.getSelectedCartItemIds());
+        } else {
+            clearUserCart(userId);
+        }
         
         // 13. Publish email events (async AFTER_COMMIT)
         publishOrderEmails(masterOrder);
@@ -840,5 +859,18 @@ public class OrderServiceImpl implements OrderService {
             sb.append(", ").append(address.getCountryCode());
         }
         return sb.toString();
+    }
+    
+    /**
+     * Clear only selected cart items from user's cart
+     */
+    private void clearSelectedCartItems(Long userId, List<Long> cartItemIds) {
+        try {
+            cartItemRepository.deleteByCartUserIdAndIdIn(userId, cartItemIds);
+            log.info("Cleared {} selected cart items for user {}", cartItemIds.size(), userId);
+        } catch (Exception e) {
+            log.error("Failed to clear selected cart items for user {}: {}", userId, e.getMessage(), e);
+            // Don't throw exception as order is already created
+        }
     }
 } 

@@ -28,6 +28,12 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     List<CartItem> findByCartUserId(@Param("userId") Long userId);
     
     /**
+     * Tìm specific items trong giỏ hàng của user theo IDs
+     */
+    @Query("SELECT ci FROM CartItem ci WHERE ci.cart.user.id = :userId AND ci.id IN :cartItemIds ORDER BY ci.addedAt DESC")
+    List<CartItem> findByCartUserIdAndIdIn(@Param("userId") Long userId, @Param("cartItemIds") List<Long> cartItemIds);
+    
+    /**
      * Tìm item theo ID và userId (để bảo mật)
      */
     @Query("SELECT ci FROM CartItem ci WHERE ci.id = :itemId AND ci.cart.user.id = :userId")
@@ -39,6 +45,13 @@ public interface CartItemRepository extends JpaRepository<CartItem, Long> {
     @Modifying
     @Query("DELETE FROM CartItem ci WHERE ci.cart.user.id = :userId")
     void deleteByCartUserId(@Param("userId") Long userId);
+    
+    /**
+     * Xóa specific items trong giỏ hàng của user theo IDs
+     */
+    @Modifying
+    @Query("DELETE FROM CartItem ci WHERE ci.cart.user.id = :userId AND ci.id IN :cartItemIds")
+    void deleteByCartUserIdAndIdIn(@Param("userId") Long userId, @Param("cartItemIds") List<Long> cartItemIds);
     
     /**
      * Xóa tất cả items của một cart
