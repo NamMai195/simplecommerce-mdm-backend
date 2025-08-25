@@ -55,6 +55,7 @@ public class UserServiceImpl implements UserService {
         // Cập nhật các trường có thể thay đổi
         Optional.ofNullable(updateRequest.getFirstName()).ifPresent(user::setFirstName);
         Optional.ofNullable(updateRequest.getLastName()).ifPresent(user::setLastName);
+        Optional.ofNullable(updateRequest.getMetadata()).ifPresent(user::setMetadata);
 
         // Kiểm tra số điện thoại
         if (updateRequest.getPhoneNumber() != null && !updateRequest.getPhoneNumber().equals(user.getPhoneNumber())) {
@@ -182,7 +183,6 @@ public class UserServiceImpl implements UserService {
         // Update basic fields
         Optional.ofNullable(updateRequest.getFirstName()).ifPresent(user::setFirstName);
         Optional.ofNullable(updateRequest.getLastName()).ifPresent(user::setLastName);
-        Optional.ofNullable(updateRequest.getAvatarUrl()).ifPresent(user::setAvatarUrl);
         Optional.ofNullable(updateRequest.getMetadata()).ifPresent(user::setMetadata);
 
         // Check phone number uniqueness
