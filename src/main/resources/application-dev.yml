@@ -85,6 +85,10 @@ openapi:
 # Frontend Configuration
 frontend:
   url: ${FRONTEND_URL:http://localhost:5173}
+  admin-seller:
+    url: ${FRONTEND_ADMIN_SELLER_URL:http://localhost:3000}
+  user:
+    url: ${FRONTEND_USER_URL:http://localhost:3001}
 
 # JWT Configuration - SECURE: Using environment variables only
 jwt:

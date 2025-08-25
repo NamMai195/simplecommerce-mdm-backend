@@ -16,14 +16,23 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
+import java.util.Arrays;
+import java.util.List;
+
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity // Quan trọng để dùng @PreAuthorize/@PostAuthorize
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    @Value("${frontend.url}")
-    private String frontendUrl;
+    @Value("${frontend.admin-seller.url:http://localhost:3000}")
+    private String adminSellerFrontendUrl;
+
+    @Value("${frontend.user.url:http://localhost:3001}")
+    private String userFrontendUrl;
+
+    @Value("${frontend.url:http://localhost:5173}")
+    private String defaultFrontendUrl;
 
     private final CustomizeRequestFilter customizeRequestFilter;
     private final AuthenticationProvider authenticationProvider;
@@ -69,8 +78,15 @@ public class SecurityConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(@NonNull CorsRegistry registry) {
+                // Tạo danh sách tất cả frontend URLs được phép
+                List<String> allowedOrigins = Arrays.asList(
+                        adminSellerFrontendUrl,
+                        userFrontendUrl,
+                        defaultFrontendUrl
+                );
+                
                 registry.addMapping("/**")
-                        .allowedOrigins(frontendUrl)
+                        .allowedOrigins(allowedOrigins.toArray(new String[0]))
                         .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                         .allowedHeaders("*")
                         .exposedHeaders("Authorization")

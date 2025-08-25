@@ -92,6 +92,10 @@ openapi:
 # Frontend Configuration
 frontend:
   url: ${FRONTEND_URL:https://simplecommerce-frontend.up.railway.app}
+  admin-seller:
+    url: ${FRONTEND_ADMIN_SELLER_URL:https://simplecommerce-admin-seller.up.railway.app}
+  user:
+    url: ${FRONTEND_USER_URL:https://simplecommerce-user.up.railway.app}
 
 # JWT Configuration - SECURE: Using environment variables only
 jwt:
