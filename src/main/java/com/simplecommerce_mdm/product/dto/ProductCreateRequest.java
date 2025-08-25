@@ -28,4 +28,4 @@ public class ProductCreateRequest {
     @NotEmpty(message = "Product must have at least one variant")
     @Valid // This ensures that the validation rules on ProductVariantRequest are triggered
     private List<ProductVariantRequest> variants;
-} 
+}

@@ -23,5 +23,5 @@ public class ProductVariantRequest {
     private Integer stockQuantity;
     
     // JSON string for options like {"color": "Red", "size": "XL"}
-    private String options; 
+    private String options;
 } 
