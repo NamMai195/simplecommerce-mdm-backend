@@ -22,10 +22,10 @@ public class AddressCreateRequest {
     @Size(max = 255, message = "Street address 2 must not exceed 255 characters")
     private String streetAddress2;
 
+    @NotBlank(message = "Ward is required")
     @Size(max = 100, message = "Ward must not exceed 100 characters")
     private String ward;
 
-    @NotBlank(message = "District is required")
     @Size(max = 100, message = "District must not exceed 100 characters")
     private String district;
 
