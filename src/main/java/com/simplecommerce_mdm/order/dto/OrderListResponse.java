@@ -28,6 +28,11 @@ public class OrderListResponse {
     // Customer info (for admin/seller view)
     private String customerEmail;
     
+    // Shipping address info (for seller to see delivery location)
+    private String shippingAddress;
+    private String contactName;
+    private String contactPhone;
+    
     // Order status
     private OrderStatus orderStatus;
     

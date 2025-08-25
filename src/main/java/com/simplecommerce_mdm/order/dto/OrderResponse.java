@@ -40,6 +40,12 @@ public class OrderResponse {
     // Shipping info
     private String shippingMethodNameSnapshot;
     
+    // Shipping address info (for seller to see delivery location)
+    private String shippingAddress;
+    private String billingAddress;
+    private String contactName;
+    private String contactPhone;
+    
     // Notes
     private String notesToSeller;
     
