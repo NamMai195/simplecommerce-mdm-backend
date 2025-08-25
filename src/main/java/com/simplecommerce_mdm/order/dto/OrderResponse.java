@@ -51,6 +51,9 @@ public class OrderResponse {
     // Order items
     private List<OrderItemResponse> orderItems;
     
+    // Product IDs for review functionality
+    private List<Long> productIds;
+    
     // Count and summary
     private Integer totalItems;
     private Integer totalQuantity;

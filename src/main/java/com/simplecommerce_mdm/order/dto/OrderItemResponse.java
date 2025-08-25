@@ -16,6 +16,7 @@ public class OrderItemResponse {
 
     private Long id;
     private Long variantId;
+    private Long productId;
     private String productNameSnapshot;
     private String variantSkuSnapshot;
     private String variantOptionsSnapshot;

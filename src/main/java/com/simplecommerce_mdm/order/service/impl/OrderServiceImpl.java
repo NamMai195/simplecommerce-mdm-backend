@@ -641,6 +641,12 @@ public class OrderServiceImpl implements OrderService {
                 .map(this::buildOrderItemResponse)
                 .collect(Collectors.toList());
         
+        // Extract product IDs from order items for review functionality
+        List<Long> productIds = orderItems.stream()
+                .map(item -> item.getVariant().getProduct().getId())
+                .distinct()
+                .collect(Collectors.toList());
+        
         BigDecimal totalAmount = order.getSubtotalAmount()
                 .add(order.getShippingFee())
                 .subtract(order.getItemDiscountAmount())
@@ -667,6 +673,7 @@ public class OrderServiceImpl implements OrderService {
                 .createdAt(order.getCreatedAt())
                 .updatedAt(order.getUpdatedAt())
                 .orderItems(itemResponses)
+                .productIds(productIds) // ← THÊM VÀO ĐÂY!
                 .totalItems(orderItems.size())
                 .totalQuantity(orderItems.stream().mapToInt(OrderItem::getQuantity).sum())
                 .build();
@@ -681,6 +688,7 @@ public class OrderServiceImpl implements OrderService {
         return OrderItemResponse.builder()
                 .id(orderItem.getId())
                 .variantId(orderItem.getVariant().getId())
+                .productId(orderItem.getVariant().getProduct().getId()) // ← THÊM VÀO ĐÂY!
                 .productNameSnapshot(orderItem.getProductNameSnapshot())
                 .variantSkuSnapshot(orderItem.getVariantSkuSnapshot())
                 .variantOptionsSnapshot(orderItem.getVariantOptionsSnapshot())
