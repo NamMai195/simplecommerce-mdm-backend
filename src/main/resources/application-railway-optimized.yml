@@ -112,11 +112,11 @@ openapi:
 
 # Frontend Configuration
 frontend:
-  url: ${FRONTEND_URL:https://simplecommerce-frontend.up.railway.app}
+  url: ${FRONTEND_URL:https://simplecommerce-frontend.vercel.app}
   admin-seller:
-    url: ${FRONTEND_ADMIN_SELLER_URL:https://simplecommerce-admin-seller.up.railway.app}
+    url: ${FRONTEND_ADMIN_SELLER_URL:https://simplecommerce-mdm-as-frontend.vercel.app}
   user:
-    url: ${FRONTEND_USER_URL:https://simplecommerce-user.up.railway.app}
+    url: ${FRONTEND_USER_URL:https://simplecommerce-user-frontend.vercel.app}
 
 # JWT Configuration
 jwt:
