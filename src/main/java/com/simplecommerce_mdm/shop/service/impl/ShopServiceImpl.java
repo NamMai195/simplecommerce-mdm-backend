@@ -31,6 +31,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+import com.simplecommerce_mdm.user.repository.UserAddressRepository;
 
 @Slf4j
 @Service
@@ -41,6 +42,7 @@ public class ShopServiceImpl implements ShopService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final AddressRepository addressRepository;
+    private final UserAddressRepository userAddressRepository;
     private final ModelMapper modelMapper;
     private final CloudinaryService cloudinaryService;
 
@@ -315,20 +317,17 @@ public class ShopServiceImpl implements ShopService {
             throw new IllegalStateException("Shop is not approved yet");
         }
         
-        // Validate that the address exists
-        Address address = addressRepository.findById(addressId)
-                .orElseThrow(() -> new ResourceNotFoundException("Address not found with id: " + addressId));
+        // Treat addressId parameter as userAddressId for safer UX
+        com.simplecommerce_mdm.user.model.UserAddress userAddress = userAddressRepository.findByIdAndUserId(addressId, seller.getId())
+                .orElseThrow(() -> new ResourceNotFoundException("UserAddress not found or not owned by seller: " + addressId));
         
-        // TODO: Add address ownership validation
-        // For now, we'll allow any address to be used
-        // In production, you might want to validate that the address belongs to the seller
-        // or that the seller has permission to use this address
+        Address address = userAddress.getAddress();
         
         // Update shop address
         shop.setAddress(address);
         shop = shopRepository.save(shop);
         
-        log.info("Shop address updated for shop {}: {}", shop.getName(), addressId);
+        log.info("Shop address updated for shop {} using userAddressId {} -> addressId {}", shop.getName(), addressId, address.getId());
         
         return convertToShopResponse(shop);
     }

@@ -12,6 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class ShopAddressUpdateRequest {
 
-    @NotNull(message = "Address ID is required")
-    private Long addressId;
+    @NotNull(message = "UserAddress ID is required")
+    private Long userAddressId;
 }

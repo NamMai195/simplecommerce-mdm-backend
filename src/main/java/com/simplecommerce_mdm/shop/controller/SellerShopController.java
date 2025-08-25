@@ -93,10 +93,10 @@ public class SellerShopController {
             @Valid @RequestBody ShopAddressUpdateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
         
-        log.info("Seller {} updating shop address to: {}", userDetails.getUser().getEmail(), request.getAddressId());
+        log.info("Seller {} updating shop address to userAddressId: {}", userDetails.getUser().getEmail(), request.getUserAddressId());
         
         try {
-            ShopResponse shopResponse = shopService.updateShopAddress(request.getAddressId(), userDetails);
+            ShopResponse shopResponse = shopService.updateShopAddress(request.getUserAddressId(), userDetails);
             
             return ResponseEntity.ok(
                     ApiResponse.<ShopResponse>builder()
