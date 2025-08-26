@@ -13,6 +13,8 @@ import com.simplecommerce_mdm.product.model.Shop;
 import com.simplecommerce_mdm.product.repository.ProductVariantRepository;
 import com.simplecommerce_mdm.product.repository.ShopRepository;
 import com.simplecommerce_mdm.product.repository.ProductImageRepository;
+import com.simplecommerce_mdm.product.model.ProductImage;
+import com.simplecommerce_mdm.common.enums.ImageTargetType;
 import com.simplecommerce_mdm.user.model.User;
 import com.simplecommerce_mdm.user.model.Address;
 import com.simplecommerce_mdm.user.model.UserAddress;
@@ -704,14 +706,34 @@ public class OrderServiceImpl implements OrderService {
     
     private OrderItemResponse buildOrderItemResponse(OrderItem orderItem) {
         String imageUrl = null;
+        
+        // Priority 1: Try to get variant image first
         if (orderItem.getVariantImageCloudinaryPublicIdSnapshot() != null) {
             imageUrl = cloudinaryService.getImageUrl(orderItem.getVariantImageCloudinaryPublicIdSnapshot());
+        }
+        
+        // Priority 2: Fallback to product image if variant image is null
+        if (imageUrl == null) {
+            if (orderItem.getProductImageCloudinaryPublicIdSnapshot() != null) {
+                imageUrl = cloudinaryService.getImageUrl(orderItem.getProductImageCloudinaryPublicIdSnapshot());
+            } else {
+                // Priority 3: Get product main image from database as last resort
+                try {
+                    String productMainImagePublicId = getProductMainImage(orderItem.getVariant().getProduct());
+                    if (productMainImagePublicId != null) {
+                        imageUrl = cloudinaryService.getImageUrl(productMainImagePublicId);
+                    }
+                } catch (Exception e) {
+                    log.warn("Failed to get fallback product image for order item {}: {}", 
+                            orderItem.getId(), e.getMessage());
+                }
+            }
         }
         
         return OrderItemResponse.builder()
                 .id(orderItem.getId())
                 .variantId(orderItem.getVariant().getId())
-                .productId(orderItem.getVariant().getProduct().getId()) // ← THÊM VÀO ĐÂY!
+                .productId(orderItem.getVariant().getProduct().getId())
                 .productNameSnapshot(orderItem.getProductNameSnapshot())
                 .variantSkuSnapshot(orderItem.getVariantSkuSnapshot())
                 .variantOptionsSnapshot(orderItem.getVariantOptionsSnapshot())
@@ -732,15 +754,32 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItem> orderItems = orderItemRepository.findByOrderId(order.getId());
         List<String> productImageUrls = orderItems.stream()
                 .map(item -> {
+                    String imageUrl = null;
+                    
                     // Priority 1: Variant image (if available)
                     if (item.getVariantImageCloudinaryPublicIdSnapshot() != null) {
-                        return cloudinaryService.getImageUrl(item.getVariantImageCloudinaryPublicIdSnapshot());
+                        imageUrl = cloudinaryService.getImageUrl(item.getVariantImageCloudinaryPublicIdSnapshot());
                     }
+                    
                     // Priority 2: Product image (fallback)
-                    if (item.getProductImageCloudinaryPublicIdSnapshot() != null) {
-                        return cloudinaryService.getImageUrl(item.getProductImageCloudinaryPublicIdSnapshot());
+                    if (imageUrl == null && item.getProductImageCloudinaryPublicIdSnapshot() != null) {
+                        imageUrl = cloudinaryService.getImageUrl(item.getProductImageCloudinaryPublicIdSnapshot());
                     }
-                    return null;
+                    
+                    // Priority 3: Get product main image from database as last resort
+                    if (imageUrl == null) {
+                        try {
+                            String productMainImagePublicId = getProductMainImage(item.getVariant().getProduct());
+                            if (productMainImagePublicId != null) {
+                                imageUrl = cloudinaryService.getImageUrl(productMainImagePublicId);
+                            }
+                        } catch (Exception e) {
+                            log.warn("Failed to get fallback product image for order list item {}: {}", 
+                                    item.getId(), e.getMessage());
+                        }
+                    }
+                    
+                    return imageUrl;
                 })
                 .filter(url -> url != null)
                 .distinct() // Remove duplicates
