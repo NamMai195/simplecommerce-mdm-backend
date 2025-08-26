@@ -22,6 +22,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import com.simplecommerce_mdm.product.dto.ProductImageDeleteRequest;
+import com.simplecommerce_mdm.product.dto.ProductImageListResponse;
 
 @RestController
 @RequestMapping("/api/v1/seller/products")
@@ -196,6 +198,40 @@ public class ProductSellerController {
 
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .message("Variant deleted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/{productId}/images")
+    @Operation(summary = "Delete Product Images", description = "Delete selected images of a product by IDs (Seller)")
+    public ResponseEntity<ApiResponse<Void>> deleteProductImages(
+            @PathVariable Long productId,
+            @RequestBody ProductImageDeleteRequest request,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        log.info("Deleting product images for product {} by seller {}", productId, userDetails.getUser().getEmail());
+
+        productService.deleteProductImages(productId, request.getImageIds(), userDetails);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .message("Product images deleted successfully")
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{productId}/images")
+    @Operation(summary = "List Product Images", description = "List images of a product with IDs for deletion (Seller)")
+    public ResponseEntity<ApiResponse<ProductImageListResponse>> listProductImages(
+            @PathVariable Long productId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+
+        ProductImageListResponse list = productService.listProductImages(productId, userDetails);
+
+        ApiResponse<ProductImageListResponse> response = ApiResponse.<ProductImageListResponse>builder()
+                .message("Product images retrieved successfully")
+                .data(list)
                 .build();
 
         return ResponseEntity.ok(response);

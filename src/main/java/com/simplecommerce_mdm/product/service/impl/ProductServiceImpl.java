@@ -55,6 +55,8 @@ import java.util.stream.Collectors;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import com.simplecommerce_mdm.product.repository.ProductVariantRepository;
+import com.simplecommerce_mdm.product.dto.ProductImageListResponse;
+import com.simplecommerce_mdm.product.dto.ProductImageItem;
 
 @Slf4j
 @Service
@@ -439,6 +441,39 @@ public class ProductServiceImpl implements ProductService {
                 variant.getSku(), variantId, product.getName(), productId, seller.getEmail());
     }
 
+    @Override
+    @Transactional
+    public void deleteProductImages(Long productId, List<Long> imageIds, CustomUserDetails sellerDetails) {
+        User seller = sellerDetails.getUser();
+        log.info("Deleting {} images from product {} for seller: {}", imageIds.size(), productId, seller.getEmail());
+
+        Shop shop = shopRepository.findByUser(seller)
+                .orElseThrow(() -> new ResourceNotFoundException("Shop not found for the current seller."));
+
+        // Auth check: product belongs to seller's shop
+        Product product = productRepository.findByIdAndShop(productId, shop)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id: " + productId + " or you don't have permission to access it."));
+
+        // Load images by ids and product
+        List<ProductImage> images = productImageRepository.findByIdInAndTargetIdAndTargetType(
+                imageIds, product.getId(), ImageTargetType.PRODUCT);
+        if (images.isEmpty()) {
+            throw new ResourceNotFoundException("No product images found for given IDs");
+        }
+
+        // Delete from Cloudinary then DB
+        for (ProductImage img : images) {
+            try {
+                cloudinaryService.deleteFile(img.getCloudinaryPublicId());
+            } catch (Exception e) {
+                log.warn("Failed to delete Cloudinary image {}: {}", img.getCloudinaryPublicId(), e.getMessage());
+            }
+        }
+        productImageRepository.deleteAll(images);
+        log.info("Deleted {} images from product {}", images.size(), product.getName());
+    }
+
     // Optional method to cleanup Cloudinary images when deleting product
     private void cleanupProductImages(Product product) {
         List<ProductImage> productImages = productImageRepository.findByTargetIdAndTargetType(
@@ -631,6 +666,12 @@ public class ProductServiceImpl implements ProductService {
         return convertToProductAdminResponse(savedProduct);
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public ProductAdminResponse getProductDetailsForAdmin(Long productId) {
+        return getProductByIdForAdmin(productId);
+    }
+
     private ProductAdminResponse convertToProductAdminResponse(Product product) {
         ProductAdminResponse response = modelMapper.map(product, ProductAdminResponse.class);
         
@@ -741,6 +782,12 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found or not approved: " + productId));
 
         return convertToProductBuyerResponse(product);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductResponse getProductById(Long id, CustomUserDetails sellerDetails) {
+        return getSellerProductById(id, sellerDetails);
     }
 
     // Helper method to convert Product to ProductBuyerResponse
@@ -972,6 +1019,52 @@ public class ProductServiceImpl implements ProductService {
 
         log.info("Final price range response: min={}, max={}", response.getMinPrice(), response.getMaxPrice());
         return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductImageListResponse listProductImages(Long productId, CustomUserDetails sellerDetails) {
+        User seller = sellerDetails.getUser();
+        Shop shop = shopRepository.findByUser(seller)
+                .orElseThrow(() -> new ResourceNotFoundException("Shop not found for the current seller."));
+
+        Product product = productRepository.findByIdAndShop(productId, shop)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Product not found with id: " + productId + " or you don't have permission to access it."));
+
+        List<ProductImage> images = productImageRepository.findByTargetIdAndTargetType(product.getId(), ImageTargetType.PRODUCT);
+        List<ProductImageItem> items = images.stream().map(img -> ProductImageItem.builder()
+                        .id(img.getId())
+                        .publicId(img.getCloudinaryPublicId())
+                        .url(cloudinaryService.getImageUrl(img.getCloudinaryPublicId()))
+                        .isPrimary(img.getIsPrimary())
+                        .sortOrder(img.getSortOrder())
+                        .build())
+                .collect(Collectors.toList());
+
+        return ProductImageListResponse.builder()
+                .productId(product.getId())
+                .count(items.size())
+                .images(items)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ProductListResponse getAllProducts(Pageable pageable) {
+        Page<Product> page = productRepository.findAll(pageable);
+        List<ProductResponse> products = page.getContent().stream()
+                .map(this::convertToProductResponse)
+                .collect(Collectors.toList());
+        ProductListResponse resp = new ProductListResponse();
+        resp.setProducts(products);
+        resp.setCurrentPage(page.getNumber());
+        resp.setTotalPages(page.getTotalPages());
+        resp.setTotalElements(page.getTotalElements());
+        resp.setPageSize(page.getSize());
+        resp.setHasNext(page.hasNext());
+        resp.setHasPrevious(page.hasPrevious());
+        return resp;
     }
 
     // Helper method to build ProductBuyerListResponse from Page<Product>
