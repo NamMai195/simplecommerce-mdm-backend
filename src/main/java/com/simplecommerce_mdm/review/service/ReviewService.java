@@ -59,4 +59,7 @@ public interface ReviewService {
     
     // Report review
     void reportReview(Long reviewId, Long userId, String reportReason);
+    
+    // Cleanup orphaned reviews (reviews with invalid references)
+    void cleanupOrphanedReviews();
 }

@@ -162,4 +162,29 @@ public class ReviewAdminController {
         
         return ResponseEntity.ok(apiResponse);
     }
+    
+    @PostMapping("/cleanup/orphaned")
+    @Operation(summary = "Cleanup Orphaned Reviews", description = "Remove reviews with invalid references (Admin only)")
+    public ResponseEntity<ApiResponse<String>> cleanupOrphanedReviews() {
+        log.info("Admin starting cleanup of orphaned reviews");
+        
+        try {
+            reviewService.cleanupOrphanedReviews();
+            
+            ApiResponse<String> apiResponse = ApiResponse.<String>builder()
+                    .message("Orphaned reviews cleanup completed successfully")
+                    .data("Cleanup process finished")
+                    .build();
+            
+            return ResponseEntity.ok(apiResponse);
+        } catch (Exception e) {
+            log.error("Error during orphaned reviews cleanup: {}", e.getMessage());
+            
+            ApiResponse<String> apiResponse = ApiResponse.<String>builder()
+                    .message("Error during cleanup: " + e.getMessage())
+                    .build();
+            
+            return ResponseEntity.internalServerError().body(apiResponse);
+        }
+    }
 }

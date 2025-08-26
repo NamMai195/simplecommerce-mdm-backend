@@ -18,6 +18,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -179,7 +180,44 @@ public class ReviewServiceImpl implements ReviewService {
     @Transactional(readOnly = true)
     public ReviewListResponse getAllReviews(Pageable pageable) {
         Page<Review> reviewPage = reviewRepository.findAll(pageable);
-        return buildReviewListResponse(reviewPage, null);
+        
+        // Filter out reviews with invalid references (orphaned reviews)
+        List<Review> validReviews = reviewPage.getContent().stream()
+                .filter(review -> {
+                    try {
+                        // Check if product exists
+                        if (review.getProduct() == null || 
+                            productRepository.findById(review.getProduct().getId()).isEmpty()) {
+                            log.warn("Review {} has invalid product reference, skipping...", review.getId());
+                            return false;
+                        }
+                        
+                        // Check if user exists
+                        if (review.getUser() == null || 
+                            userRepository.findById(review.getUser().getId()).isEmpty()) {
+                            log.warn("Review {} has invalid user reference, skipping...", review.getId());
+                            return false;
+                        }
+                        
+                        // Check if order exists
+                        if (review.getOrder() == null || 
+                            orderRepository.findById(review.getOrder().getId()).isEmpty()) {
+                            log.warn("Review {} has invalid order reference, skipping...", review.getId());
+                            return false;
+                        }
+                        
+                        return true;
+                    } catch (Exception e) {
+                        log.error("Error validating review {}: {}", review.getId(), e.getMessage());
+                        return false;
+                    }
+                })
+                .collect(Collectors.toList());
+        
+        // Create a new page with valid reviews only
+        Page<Review> validReviewPage = new PageImpl<>(validReviews, pageable, validReviews.size());
+        
+        return buildReviewListResponse(validReviewPage, null);
     }
     
     @Override
@@ -319,6 +357,22 @@ public class ReviewServiceImpl implements ReviewService {
     
     private ReviewResponse mapToReviewResponse(Review review) {
         // Manually map to avoid ModelMapper ambiguity on userName (firstName/lastName/fullName)
+        // Add null checks for product to prevent errors
+        if (review.getProduct() == null) {
+            log.error("Review {} has null product, skipping...", review.getId());
+            throw new ResourceNotFoundException("Product not found for review: " + review.getId());
+        }
+        
+        if (review.getUser() == null) {
+            log.error("Review {} has null user, skipping...", review.getId());
+            throw new ResourceNotFoundException("User not found for review: " + review.getId());
+        }
+        
+        if (review.getOrder() == null) {
+            log.error("Review {} has null order, skipping...", review.getId());
+            throw new ResourceNotFoundException("Order not found for review: " + review.getId());
+        }
+        
         return ReviewResponse.builder()
                 .id(review.getId())
                 .userId(review.getUser().getId())
@@ -411,5 +465,52 @@ public class ReviewServiceImpl implements ReviewService {
                 .averageRating(averageRating)
                 .totalReviews(totalReviews)
                 .build();
+    }
+    
+    @Override
+    @Transactional
+    public void cleanupOrphanedReviews() {
+        log.info("Starting cleanup of orphaned reviews...");
+        
+        List<Review> allReviews = reviewRepository.findAll();
+        int deletedCount = 0;
+        
+        for (Review review : allReviews) {
+            try {
+                boolean shouldDelete = false;
+                
+                // Check if product exists
+                if (review.getProduct() == null || 
+                    productRepository.findById(review.getProduct().getId()).isEmpty()) {
+                    log.warn("Review {} has invalid product reference, marking for deletion", review.getId());
+                    shouldDelete = true;
+                }
+                
+                // Check if user exists
+                if (review.getUser() == null || 
+                    userRepository.findById(review.getUser().getId()).isEmpty()) {
+                    log.warn("Review {} has invalid user reference, marking for deletion", review.getId());
+                    shouldDelete = true;
+                }
+                
+                // Check if order exists
+                if (review.getOrder() == null || 
+                    orderRepository.findById(review.getOrder().getId()).isEmpty()) {
+                    log.warn("Review {} has invalid order reference, marking for deletion", review.getId());
+                    shouldDelete = true;
+                }
+                
+                if (shouldDelete) {
+                    reviewRepository.delete(review);
+                    deletedCount++;
+                    log.info("Deleted orphaned review: {}", review.getId());
+                }
+                
+            } catch (Exception e) {
+                log.error("Error processing review {} during cleanup: {}", review.getId(), e.getMessage());
+            }
+        }
+        
+        log.info("Cleanup completed. Deleted {} orphaned reviews", deletedCount);
     }
 }
